@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Paleta por defecto (Océano) + landing en modo oscuro. */
+:root {
+  --t-bg: #060B1A;
+  --t-surface: #0A1230;
+  --t-surface2: #101B45;
+  --t-border: #1E293B;
+  --t-muted: #94A3B8;
+  --t-text2: #CBD5E1;
+  --t-accent: #22D3EE;
+  --t-accent2: #2563EB;
+  --t-accent-soft: rgba(34, 211, 238, .15);
+  --l-bg: #0B0F19;
+  --l-surface: #0D1527;
+  --l-surface2: #101B45;
+  --l-text: #F8FAFC;
+  --l-text2: #CBD5E1;
+  --l-muted: #94A3B8;
+  --l-border: #1E293B;
+  --l-accent: #22D3EE;
+  --l-k1: #22D3EE;
+  --l-k2: #5EEAD4;
+  --l-warn: #FCD34D;
+  --l-ok: #6EE7B7;
+  --l-accent-soft: rgba(34, 211, 238, .12);
+}
+
+/* Modo claro de la página principal. */
+html[data-mode="light"] {
+  --l-bg: #F4F7FC;
+  --l-surface: #FFFFFF;
+  --l-surface2: #EAF0F8;
+  --l-text: #0F172A;
+  --l-text2: #334155;
+  --l-muted: #5B6B82;
+  --l-border: #DCE4F0;
+  --l-accent: #0891B2;
+  --l-k1: #0E7490;
+  --l-k2: #0F766E;
+  --l-warn: #B45309;
+  --l-ok: #047857;
+  --l-accent-soft: rgba(8, 145, 178, .10);
+}
+
+html[data-mode="light"] body {
+  background: #F4F7FC;
+}
+
+body {
+  background: #0b0f19;
+  color: #f8fafc;
+}
+
+::selection {
+  background: rgba(6, 182, 212, 0.35);
+}

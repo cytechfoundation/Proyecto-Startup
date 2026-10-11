@@ -1,0 +1,34 @@
+# --- Secretos y entorno: NUNCA subir ---
+.env
+.env.*
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.coverage
+htmlcov/
+*.egg-info/
+
+# --- Node ---
+node_modules/
+npm-debug.log*
+frontend/dist/
+services/notifier/dist/
+
+# --- Base de datos local ---
+cytech.db
+*.sqlite
+*.sqlite3
+
+# --- Editores y SO ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Artefactos ---
+*.log

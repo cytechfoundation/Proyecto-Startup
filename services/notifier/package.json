@@ -1,0 +1,15 @@
+{
+  "name": "cytech-notifier",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Worker de mensajería asíncrona: consume eventos Kafka y envía emails.",
+  "scripts": {
+    "start": "node src/consumer.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "kafkajs": "^2.2.4",
+    "nodemailer": "^6.9.14"
+  }
+}
