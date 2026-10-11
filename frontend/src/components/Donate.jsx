@@ -383,7 +383,7 @@ export default function Donate() {
                     <h3 className="text-lg font-bold">Tu aporte transforma</h3>
                     {Object.keys(impacto).length > 0 && (
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--l-accent-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--l-accent)]">
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--l-accent)]" /> en vivo
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)]" /> en vivo
                       </span>
                     )}
                   </div>
