@@ -61,6 +61,12 @@ export const api = {
   agentChat: (message, sessionId, channel = "web") =>
     req("/agent/chat", { method: "POST", body: { message, session_id: sessionId || null, channel } }),
   agentSession: (sessionId, token, channel = "web") => req(`/agent/conversations/${sessionId}?channel=${channel}`, { token }),
+  impactCounters: () => req("/impact/counters"),
+  impactCounter: (key) => req(`/impact/counters/${key}`),
+  setImpactCounter: (token, key, value) =>
+    req(`/impact/counters/${key}`, { token, method: "PUT", body: { value } }),
+  adjustImpactCounter: (token, key, delta) =>
+    req(`/impact/counters/${key}/adjust`, { token, method: "POST", body: { delta } }),
   knowledge: (token) => req("/agent/knowledge", { token }),
   addKnowledge: (token, doc) => req("/agent/knowledge", { token, method: "POST", body: doc }),
   summary: (token) => req("/account/summary", { token }),

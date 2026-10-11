@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { BellRing, Plug, Activity, Save, FileText } from "lucide-react";
+import { BellRing, Plug, Activity, Save, FileText, GraduationCap } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
 import AccountSidebar from "../components/AccountSidebar.jsx";
@@ -8,6 +8,7 @@ import AccountSteps from "../components/AccountSteps.jsx";
 import Collapsible from "../components/Collapsible.jsx";
 import ThemeSwitcher from "../components/ThemeSwitcher.jsx";
 import CalendarImporter from "../components/CalendarImporter.jsx";
+import ScholarshipCounter from "../components/ScholarshipCounter.jsx";
 
 const INTEGRATIONS = [
   { id: "pos", name: "POS / Punto de venta", desc: "Sincroniza tickets, caja e inventario." },
@@ -217,6 +218,11 @@ export default function Account() {
               {user?.role === "admin" && (
                 <Collapsible title="Importar Calendario DIAN (admin)" icon={FileText} tone="blue" defaultOpen badge="PDF 2026">
                   <CalendarImporter bare />
+                </Collapsible>
+              )}
+              {user?.role === "admin" && (
+                <Collapsible title="Contador de becas (admin)" icon={GraduationCap} tone="green" defaultOpen badge="página pública">
+                  <ScholarshipCounter token={token} onError={setMsg} />
                 </Collapsible>
               )}
               <Collapsible title="Alertas" icon={BellRing} tone="blue" defaultOpen badge="0 mensajes sin leer">

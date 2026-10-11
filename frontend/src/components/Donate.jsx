@@ -44,6 +44,23 @@ export default function Donate() {
   const [err, setErr] = useState("");
   const [sdk, setSdk] = useState("cargando");
   const [copied, setCopied] = useState(false);
+  // Cifras de impacto en vivo (clave -> {value, unit}); si el backend no responde,
+  // se usan las estáticas de FOUNDATION.
+  const [impacto, setImpacto] = useState({});
+
+  useEffect(() => {
+    let vivo = true;
+    api
+      .impactCounters()
+      .then((d) => {
+        if (!vivo) return;
+        setImpacto(Object.fromEntries((d.counters || []).map((c) => [c.key, c])));
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const usd = cop / fx;
   const active = FOUNDATION.causes.find((c) => c.id === cause) ?? FOUNDATION.causes[0];
@@ -362,7 +379,14 @@ export default function Donate() {
                   <LineChart className="h-5 w-5" />
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold">Tu aporte transforma</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold">Tu aporte transforma</h3>
+                    {Object.keys(impacto).length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--l-accent-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--l-accent)]">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--l-accent)]" /> en vivo
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-[var(--l-muted)]">
                     Con tu donación, más jóvenes pueden acceder a educación y tecnología.
                   </p>
@@ -373,6 +397,9 @@ export default function Donate() {
                 {FOUNDATION.causes.map((c) => {
                   const Icon = ICONS[c.icon] ?? HeartHandshake;
                   const on = cause === c.id;
+                  const vivo = impacto[c.id];
+                  const cifra = vivo?.value ?? c.impact.value;
+                  const unidad = vivo?.unit ?? c.impact.unit;
                   const tone =
                     c.tone === "amber"
                       ? "from-amber-400 to-orange-500 text-slate-950"
@@ -380,6 +407,7 @@ export default function Donate() {
                   return (
                     <li
                       key={c.id}
+                      title={vivo?.updated_at ? `Actualizado ${new Date(vivo.updated_at).toLocaleString("es-CO")}` : undefined}
                       className={`flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors ${
                         on ? "bg-[var(--l-accent-soft)]" : ""
                       }`}
@@ -397,11 +425,9 @@ export default function Donate() {
                             c.tone === "amber" ? "text-[var(--l-warn)]" : "text-[var(--l-accent)]"
                           }`}
                         >
-                          +{c.impact.value}
+                          +{cifra}
                         </p>
-                        <p className="text-[11px] uppercase tracking-wider text-[var(--l-muted)]">
-                          {c.impact.unit}
-                        </p>
+                        <p className="text-[11px] uppercase tracking-wider text-[var(--l-muted)]">{unidad}</p>
                       </div>
                     </li>
                   );
