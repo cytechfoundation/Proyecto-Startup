@@ -180,6 +180,57 @@ Respuesta:
 
 ---
 
+## 🧰 10. Herramientas (wrappers OSS + binarios locales)
+Capa de adaptadores sobre librerías de código abierto (`pypdf`, `Pillow`, `zipfile`…) y ejecutables
+del sistema (`git`, `node`, `pdftotext`, `pdfinfo`, `ffprobe`, `soffice`). **Solo administradores.**
+
+| Método | Endpoint | Descripción | Auth |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/tools` | Catálogo completo con la disponibilidad real en el servidor (`available`, `binary_path`/`module`, esquema de `params`). | ✅ (Admin) |
+| `GET` | `/tools/{name}` | Detalle de una herramienta: parámetros, binario/módulo y versión instalada. | ✅ (Admin) |
+| `POST` | `/tools/{name}/run` | Ejecuta la herramienta con `params` validados. Cuerpo: `{"params":{...},"timeout":15}`. | ✅ (Admin) |
+| `POST` | `/tools/files` | Sube un archivo (multipart) y devuelve su `id`. | ✅ (Admin) |
+| `GET` | `/tools/files` | Lista los archivos subidos. | ✅ (Admin) |
+| `DELETE` | `/tools/files/{id}` | Borra un archivo subido. | ✅ (Admin) |
+
+**Herramientas incluidas** (las no instaladas aparecen con `available: false` y `run` responde `409`):
+
+| Herramienta | Tipo | Params | Qué hace |
+| :--- | :--- | :--- | :--- |
+| `pdf.info` | lib (pypdf) | `file` | Páginas, cifrado, metadatos, hash. |
+| `pdf.extract` | lib (pypdf) | `file`, `pages` | Texto real (`"1-3"` o todas). |
+| `pdf.merge` | lib (pypdf) | `files[]`, `name` | Une PDFs y devuelve el id generado. |
+| `text.stats` | lib (stdlib) | `file` | Bytes/líneas/palabras + sha256. |
+| `zip.list` | lib (stdlib) | `file`, `limit` | Entradas de un comprimido. |
+| `image.info` | lib (Pillow) | `file` | Dimensiones, modo y formato. |
+| `xlsx.rows` | lib (openpyxl) | `file`, `sheet`, `max_rows` | Filas de una hoja como JSON. |
+| `git.version` / `node.version` | binario | — | Smoke test del runner. |
+| `pdfinfo.meta` / `pdftotext.extract` | binario (Poppler) | `file` | Metadatos / texto con layout. |
+| `ffprobe.probe` | binario (FFmpeg) | `file` | Formato y pistas multimedia. |
+| `soffice.convert` | binario (LibreOffice) | `file`, `format` | Conversión headless → archivo nuevo. |
+
+**Seguridad del runner**: sin `shell` (solo `argv` en lista), ejecutable resuelto en el servidor con
+`shutil.which` (el cliente nunca envía rutas ni comandos), archivos referenciados por `id` dentro de
+`data/tools` (traversal rechazado con `422`), entorno reducido (no hereda secretos), cwd temporal,
+`timeout` duro (default 15 s, máx. 60 s) y salida recortada a 200 KB.
+
+### Ejemplo: subir un PDF y extraer su texto (ReadyAPI / curl)
+```bash
+# 1) sube el archivo y guarda el id
+curl -X POST "http://localhost:8000/api/v1/tools/files" \
+  -H "Authorization: Bearer <ADMIN_TOKEN>" -F "file=@informe.pdf"
+# → {"id":"bc772d8b48e09259","name":"informe.pdf","size":18340,"sha256":"…"}
+
+# 2) ejecuta una herramienta con ese id
+curl -X POST "http://localhost:8000/api/v1/tools/pdf.extract/run" \
+  -H "Authorization: Bearer <ADMIN_TOKEN>" -H "Content-Type: application/json" \
+  -d '{"params":{"file":"bc772d8b48e09259","pages":"1-2"},"timeout":15}'
+# → {"tool":"pdf.extract","ok":true,"output":{"pages_read":[1,2],"total_pages":3,
+#     "chars":1820,"text":"…"},"exit_code":null,"duration_ms":12,"truncated":false}
+```
+
+---
+
 ### 🛠 Notas Técnicas
 - **Headers Requeridos**: `Authorization: Bearer <token>` para rutas marcadas con ✅.
 - **Formato de Respuesta**: JSON.

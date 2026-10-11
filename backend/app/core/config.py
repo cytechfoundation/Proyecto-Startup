@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     openrouter_chat_model: str = "openai/gpt-4o-mini"
     openrouter_embed_model: str = "openai/text-embedding-3-small"
     resend_api_key: str = ""
+    # Capa de herramientas (wrappers de libs OSS + binarios locales del sistema)
+    tools_dir: str = "data/tools"        # almacén de archivos que alimentan las herramientas
+    tools_max_upload_mb: int = 12
+    tools_max_output_kb: int = 200
+    tools_default_timeout: int = 15
+    tools_max_timeout: int = 60
 
     @property
     def cors_origins_list(self) -> list[str]:

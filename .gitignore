@@ -32,3 +32,6 @@ Thumbs.db
 
 # --- Artefactos ---
 *.log
+
+# --- Datos en runtime (almacén de archivos de la capa de herramientas) ---
+backend/data/
