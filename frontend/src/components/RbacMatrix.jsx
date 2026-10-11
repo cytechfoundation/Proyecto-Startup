@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Boxes, Eye, FileBarChart2, MonitorSmartphone, Pencil, PencilLine, Plus, ScrollText, ShieldCheck, SlidersHorizontal, Trash2, Download, UserRound } from "lucide-react";
+import { Boxes, Eye, FileBarChart2, MonitorSmartphone, Pencil, Plus, ScrollText, SlidersHorizontal, Trash2, Download } from "lucide-react";
 import { api } from "../services/api.js";
+import { roleMeta } from "../data/roles.js";
 
 /**
  * Matriz de Roles y Permisos (dashboard admin).
@@ -10,29 +11,10 @@ import { api } from "../services/api.js";
  * interruptores coloreados por rol. El comportamiento es el mismo de siempre:
  * los admins alternan permisos en caliente (el backend devuelve la matriz nueva)
  * y el resto solo consulta, con la columna de su rol resaltada.
+ *
+ * La identidad de cada rol (color e icono) vive en data/roles.js, compartida
+ * con el Directorio de Usuarios.
  */
-
-// Color e icono por rol (clases literales para que Tailwind las incluya).
-const ROLES_STYLE = {
-  admin: {
-    icon: ShieldCheck,
-    on: "bg-violet-500",
-    ring: "hover:ring-2 hover:ring-violet-400/60",
-    chip: "text-violet-300 bg-violet-500/15 ring-1 ring-violet-400/30",
-  },
-  editor: {
-    icon: PencilLine,
-    on: "bg-sky-500",
-    ring: "hover:ring-2 hover:ring-sky-400/60",
-    chip: "text-sky-300 bg-sky-500/15 ring-1 ring-sky-400/30",
-  },
-  client: {
-    icon: UserRound,
-    on: "bg-emerald-500",
-    ring: "hover:ring-2 hover:ring-emerald-400/60",
-    chip: "text-emerald-300 bg-emerald-500/15 ring-1 ring-emerald-400/30",
-  },
-};
 
 // Icono por módulo (recurso) y por acción, para escanear la matriz de un vistazo.
 const RECURSO_ICON = {
@@ -49,7 +31,7 @@ const ACCION_ICON = {
   manage: SlidersHorizontal,
 };
 
-const estiloRol = (r) => ROLES_STYLE[r] || ROLES_STYLE.client;
+const estiloRol = roleMeta;
 
 /** Matriz de Roles y Permisos: interruptores funcionales (admin) o lectura. */
 export default function RbacMatrix({ token, isAdmin, myRole, onError }) {
