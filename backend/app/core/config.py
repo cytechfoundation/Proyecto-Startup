@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     tools_max_output_kb: int = 200
     tools_default_timeout: int = 15
     tools_max_timeout: int = 60
+    tax_uploads_dir: str = "data/tax_calendar"  # PDFs del Calendario Tributario subidos por admin
+    tax_max_upload_mb: int = 12
 
     @property
     def cors_origins_list(self) -> list[str]:

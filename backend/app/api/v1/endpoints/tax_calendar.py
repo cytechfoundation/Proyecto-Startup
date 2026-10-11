@@ -1,11 +1,12 @@
 """Endpoints para la gestion del Calendario Tributario (organizado por anio)."""
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Response, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.security import require_admin
 from app.db.session import get_db
 from app.models.user import User
-from app.services import tax_service
+from app.services import tax_service, tax_uploads
 
 router = APIRouter(prefix="/tax-calendar", tags=["tax-calendar"])
 
@@ -47,6 +48,13 @@ async def import_pdf(
             "Verifique que sea un Calendario Tributario con texto (no un escaneo).",
         )
 
+    # El PDF original queda guardado en disco y registrado en `tax_uploads`,
+    # de modo que el panel admin pueda listarlo y volver a descargarlo.
+    try:
+        upload = tax_uploads.save_upload(db, file.filename or "import", content, year, result)
+    except tax_uploads.TaxUploadTooLarge as exc:
+        raise HTTPException(413, str(exc))
+
     return {
         "message": (
             f"Importación exitosa: {result['created']} eventos nuevos, "
@@ -61,6 +69,45 @@ async def import_pdf(
         "first_date": result["dates"][0],
         "last_date": result["dates"][-1],
         "years": result["years"],
+        "upload": upload,
+    }
+
+
+@router.get("/uploads")
+def list_uploads(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """
+    Lista ordenada de los PDFs del calendario subidos por administradores
+    (más reciente primero): nombre, tamaño, sha256, año e importes del evento.
+    """
+    uploads = tax_uploads.list_uploads(db)
+    return {"count": len(uploads), "uploads": uploads}
+
+
+@router.get("/uploads/{upload_id}/download")
+def download_upload(upload_id: str, db: Session = Depends(get_db),
+                    _: User = Depends(require_admin)):
+    """Descarga el PDF original tal como se importó (nombre original incluido)."""
+    row = tax_uploads.get_upload(db, upload_id)
+    path = tax_uploads.resolve(upload_id)
+    if row is None or path is None:
+        raise HTTPException(404, f"No existe el archivo '{upload_id}'.")
+    return FileResponse(path, media_type="application/pdf",
+                        filename=row.filename)
+
+
+@router.delete("/uploads/{upload_id}", status_code=200)
+def delete_upload(upload_id: str, db: Session = Depends(get_db),
+                  _: User = Depends(require_admin)):
+    """
+    Elimina un PDF subido (archivo + registro). Los eventos que importó
+    permanecen en la BD; para borrarlos use `DELETE /tax-calendar/events?year=`.
+    """
+    borrado = tax_uploads.delete_upload(db, upload_id)
+    if borrado is None:
+        raise HTTPException(404, f"No existe el archivo '{upload_id}'.")
+    return {
+        "message": f"Archivo '{borrado['filename']}' eliminado del almacén.",
+        "upload": borrado,
     }
 
 

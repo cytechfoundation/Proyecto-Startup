@@ -35,3 +35,4 @@ Thumbs.db
 
 # --- Datos en runtime (almacén de archivos de la capa de herramientas) ---
 backend/data/
+data/

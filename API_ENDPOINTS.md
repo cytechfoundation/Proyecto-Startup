@@ -152,11 +152,14 @@ Importación del calendario DIAN (**almacenado por año**), exportación iCal y 
 
 | Método | Endpoint | Descripción | Auth |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/tax-calendar/import?year=2026` | Importa el calendario desde un PDF (multipart). Cada evento se guarda con su `year` (el del propio evento) y el `source` (nombre del archivo). Devuelve `created`, `duplicates`, `total_parsed`, `first_date`, `last_date` y `years` (reparto por año). **Idempotente**. | ✅ (Admin) |
+| `POST` | `/tax-calendar/import?year=2026` | Importa el calendario desde un PDF (multipart). **Guarda el PDF original** en `data/tax_calendar/` y lo registra en la lista de archivos subidos (devuelve el objeto `upload`). Cada evento se guarda con su `year` (el del propio evento) y el `source` (nombre del archivo). Devuelve `created`, `duplicates`, `total_parsed`, `first_date`, `last_date` y `years` (reparto por año). **Idempotente**. | ✅ (Admin) |
 | `GET` | `/tax-calendar/events?year=2026` | Lista los eventos importados. `year` es opcional: sin él devuelve todos los años. Soporta también `?category=`. Cada elemento incluye `year` y `source`. | ❌ |
 | `GET` | `/tax-calendar/years` | Años disponibles con su conteo de eventos y archivos de origen. Ideal para poblar selectores de año. | ❌ |
 | `DELETE` | `/tax-calendar/events?year=2026` | Elimina todos los eventos importados de un año (para recargar una versión corregida del PDF). | ✅ (Admin) |
 | `GET` | `/tax-calendar/ics?year=2026` | Exporta el calendario en **iCal (.ics)** para Windows Calendar, Outlook y Google Calendar. Devuelve `text/calendar`: calendario base DIAN del año + los eventos importados de ese mismo año. | ❌ |
+| `GET` | `/tax-calendar/uploads` | **Lista ordenada** de los PDFs subidos (más reciente primero): `id`, `filename`, `size`, `sha256`, `year`, `events_created`, `events_duplicated`, `events_total` y `uploaded_at`. | ✅ (Admin) |
+| `GET` | `/tax-calendar/uploads/{id}/download` | Descarga el PDF original tal como se importó (`Content-Disposition` con su nombre). | ✅ (Admin) |
+| `DELETE` | `/tax-calendar/uploads/{id}` | Elimina un PDF subido (archivo + registro). Los eventos que importó permanecen en la BD. | ✅ (Admin) |
 | `GET` | `/whatsapp` | Verificación del webhook (Meta `hub.challenge`). | ❌ (token) |
 | `POST` | `/whatsapp` | Ingesta de mensajes; publica en Kafka `cytech.whatsapp.incoming`. | ❌ (token) |
 
@@ -174,9 +177,20 @@ Respuesta:
   "year": 2026,
   "created": 110, "duplicates": 0, "total_parsed": 118,
   "first_date": "2026-01-13", "last_date": "2027-01-20",
-  "years": { "2026": 102, "2027": 8 }
+  "years": { "2026": 102, "2027": 8 },
+  "upload": {
+    "id": "3f0c9a1e5b7d2486", "filename": "Calendario_Tributario_2026.pdf",
+    "size": 184320, "sha256": "…", "year": 2026,
+    "events_created": 110, "events_duplicated": 0, "events_total": 118,
+    "uploaded_at": "2026-10-11T21:06:11.482Z"
+  }
 }
 ```
+
+El PDF original queda guardado en `data/tax_calendar/<id>__<nombre>` y registrado en la
+tabla `tax_uploads`: `GET /tax-calendar/uploads` lo lista ordenado por fecha de subida
+(más reciente primero) y `…/uploads/{id}/download` permite volver a descargarlo.
+Reimportar el mismo archivo actualiza su ficha en lugar de duplicarla.
 
 ---
 

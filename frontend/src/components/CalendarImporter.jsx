@@ -1,10 +1,19 @@
-import { useState } from "react";
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, CalendarRange, CopyCheck, CalendarDays } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, CalendarRange, CopyCheck, CalendarDays, Download, Trash2 } from "lucide-react";
 import { api } from "../services/api.js";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const ANIOS = [2025, 2026, 2027, 2028];
+
+const kb = (bytes) => `${(Number(bytes || 0) / 1024).toFixed(1)} KB`;
+const fecha = (iso) => {
+  try {
+    return new Date(iso).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+  } catch {
+    return "";
+  }
+};
 
 export default function CalendarImporter({ bare = false, onImported }) {
   const { token } = useAuth();
@@ -12,6 +21,26 @@ export default function CalendarImporter({ bare = false, onImported }) {
   const [year, setYear] = useState(2026);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null); // { type, msg, detail? }
+  // Archivos PDF guardados en el backend, ordenados del más reciente al más antiguo.
+  const [uploads, setUploads] = useState([]);
+  const [busyId, setBusyId] = useState("");
+  const [listError, setListError] = useState("");
+
+  const loadUploads = useCallback(async () => {
+    if (!token) return;
+    try {
+      const d = await api.taxUploads(token);
+      setUploads(d.uploads || []);
+      setListError("");
+    } catch (e) {
+      // Sin permisos admin u otro fallo: la lista simplemente no se muestra.
+      setListError(e.message || String(e));
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadUploads();
+  }, [loadUploads]);
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -44,11 +73,50 @@ export default function CalendarImporter({ bare = false, onImported }) {
           : null,
       });
       setFile(null);
+      loadUploads(); // el PDF importado aparece arriba en la lista de archivos
       onImported?.(d);
     } catch (err) {
       setStatus({ type: "error", msg: err.response?.data?.detail || "Error al importar el calendario" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** Descarga el PDF original guardado (el endpoint exige el token admin). */
+  const handleDownload = async (u) => {
+    setBusyId(u.id);
+    try {
+      const res = await axios.get(`${api.base}/api/v1/tax-calendar/uploads/${u.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = u.filename || "calendario.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setStatus({ type: "error", msg: e.response?.data?.detail || "No se pudo descargar el archivo" });
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  /** Borra el PDF del almacén (los eventos importados permanecen en la BD). */
+  const handleDelete = async (u) => {
+    if (!window.confirm(`¿Eliminar "${u.filename}" del almacén? Los eventos importados permanecen.`)) return;
+    setBusyId(u.id);
+    try {
+      await api.taxDeleteUpload(token, u.id);
+      setUploads((xs) => xs.filter((x) => x.id !== u.id));
+      setStatus({ type: "success", msg: `Archivo "${u.filename}" eliminado.` });
+    } catch (e) {
+      setStatus({ type: "error", msg: e.response?.data?.detail || e.message || "No se pudo eliminar" });
+    } finally {
+      setBusyId("");
     }
   };
 
@@ -146,6 +214,64 @@ export default function CalendarImporter({ bare = false, onImported }) {
           {loading ? "Extrayendo y analizando PDF..." : "Importar Datos"}
         </button>
       </form>
+
+      {/* ---------------- archivos PDF guardados, ordenados por subida ---------------- */}
+      {token && !listError && (
+        <div className="mt-6">
+          <div className="mb-2 flex items-center gap-2">
+            <h4 className="text-sm font-bold text-[var(--t-text)]">Archivos subidos</h4>
+            <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs font-bold text-blue-500">
+              {uploads.length}
+            </span>
+            <span className="text-xs text-[var(--t-muted)]">· más reciente primero</span>
+          </div>
+
+          {uploads.length === 0 ? (
+            <p className="rounded-xl bg-[var(--t-surface2)] px-4 py-3 text-sm text-[var(--t-muted)]">
+              Aún no hay PDFs guardados. El archivo que importes quedará aquí con su nombre.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {uploads.map((u, i) => (
+                <li
+                  key={u.id}
+                  className="flex items-center gap-3 rounded-xl bg-[var(--t-surface2)] px-3 py-2.5 ring-1 ring-[var(--t-border)]"
+                >
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-blue-500/15 text-[11px] font-bold text-blue-500">
+                    {i + 1}
+                  </span>
+                  <FileText className="h-4 w-4 shrink-0 text-[var(--t-muted)]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[var(--t-text)]" title={u.filename}>
+                      {u.filename}
+                    </p>
+                    <p className="truncate text-xs text-[var(--t-muted)]">
+                      {kb(u.size)} · año {u.year} · {u.events_created} eventos nuevos
+                      {u.events_duplicated > 0 && ` · ${u.events_duplicated} duplicados`} · {fecha(u.uploaded_at)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDownload(u)}
+                    disabled={busyId === u.id}
+                    title="Descargar PDF"
+                    className="rounded-lg p-2 text-[var(--t-muted)] transition-colors hover:bg-blue-500/10 hover:text-blue-500 disabled:opacity-50"
+                  >
+                    <Download className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(u)}
+                    disabled={busyId === u.id}
+                    title="Eliminar archivo"
+                    className="rounded-lg p-2 text-[var(--t-muted)] transition-colors hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }

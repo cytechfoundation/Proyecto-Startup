@@ -13,7 +13,7 @@ from app.db.session import SessionLocal, engine
 from app.api.v1.router import api_router
 
 # Modelos registrados para create_all (en prod usar Alembic).
-from app.models import conversation, donation, impact_counter, knowledge, lead, role_permission, subscriber, transaction, user, user_integration, tax_calendar  # noqa: F401
+from app.models import conversation, donation, impact_counter, knowledge, lead, role_permission, subscriber, tax_upload, transaction, user, user_integration, tax_calendar  # noqa: F401
 
 
 @asynccontextmanager

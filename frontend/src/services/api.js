@@ -86,6 +86,8 @@ export const api = {
   taxEvents: (year) => req(year ? `/tax-calendar/events?year=${year}` : "/tax-calendar/events"),
   taxYears: () => req("/tax-calendar/years"),
   taxDeleteYear: (year, token) => req(`/tax-calendar/events?year=${year}`, { token, method: "DELETE" }),
+  taxUploads: (token) => req("/tax-calendar/uploads", { token }),
+  taxDeleteUpload: (token, id) => req(`/tax-calendar/uploads/${id}`, { token, method: "DELETE" }),
   content: {
     pos: (token) => req("/content/pos", { token }),
     createPos: (token) => req("/content/pos/routes", { token, method: "POST", body: {} }),

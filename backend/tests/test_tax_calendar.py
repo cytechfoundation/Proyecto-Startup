@@ -7,6 +7,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from datetime import date
 import re
 
+import pytest
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -512,3 +514,150 @@ def test_ics_filtra_por_columna_year():
     assert "20260215" in ics2026
     assert "DTSTART;VALUE=DATE:20270215" not in ics2026
     assert "DTSTART;VALUE=DATE:20270215" in ics2027
+
+
+# --------------------------------------------------------------------------
+# Archivos PDF subidos: almacén en disco + lista ordenada (panel admin)
+# --------------------------------------------------------------------------
+@pytest.fixture(autouse=True)
+def _almacen_aislado(tmp_path, monkeypatch):
+    """Los PDFs de prueba se guardan en un tmp: nunca tocan data/tax_calendar."""
+    from app.services import tax_uploads
+    monkeypatch.setattr(tax_uploads, "TAX_DIR", tmp_path)
+
+
+def _limpiar_uploads():
+    from app.models.tax_upload import TaxUpload
+    db = TestingSession()
+    db.query(TaxUpload).delete()
+    db.commit()
+    db.close()
+
+
+def _subir_pdf(nombre: str, lines: list[str], anio: int = 2026):
+    pdf = make_pdf(lines)
+    r = client.post(
+        f"/api/v1/tax-calendar/import?year={anio}",
+        files={"file": (nombre, pdf, "application/pdf")},
+        headers=_admin_h(),
+    )
+    return r, pdf
+
+
+def test_almacen_por_defecto_dentro_de_backend():
+    """El PDF debe guardarse en backend/data/tax_calendar (no en la raíz del repo)."""
+    from app.core.config import settings
+    from app.services import tax_uploads
+
+    assert tax_uploads.DEFAULT_TAX_DIR == (tax_uploads._ROOT / settings.tax_uploads_dir).resolve()
+    assert tax_uploads._ROOT.name == "backend", "la raíz resuelta debe ser el proyecto backend/"
+
+
+def test_import_guarda_el_pdf_con_su_nombre():
+    _limpiar()
+    _limpiar_uploads()
+    from app.services import tax_uploads
+
+    r, pdf = _subir_pdf("Calendario_DIAN_2026.pdf", DIAN_LINES)
+    assert r.status_code == 201, r.text
+    up = r.json()["upload"]
+    assert up["filename"] == "Calendario_DIAN_2026.pdf"
+    assert up["size"] == len(pdf)
+    assert len(up["sha256"]) == 64
+    assert up["year"] == 2026 and up["events_created"] >= 10
+
+    # el PDF existe en disco con su id y su nombre, byte a byte igual al subido
+    guardado = tax_uploads.resolve(up["id"])
+    assert guardado is not None and guardado.read_bytes() == pdf
+
+    # y aparece en la lista admin
+    lista = client.get("/api/v1/tax-calendar/uploads", headers=_admin_h()).json()
+    assert up["id"] in [u["id"] for u in lista["uploads"]]
+    assert lista["uploads"][0]["filename"] == "Calendario_DIAN_2026.pdf"
+
+
+def test_uploads_lista_lo_mas_reciente_primero():
+    _limpiar()
+    _limpiar_uploads()
+    _subir_pdf("primero.pdf", DIAN_LINES)
+    _subir_pdf("segundo.pdf", DIAN_LINES + ["20 de marzo de 2026 Presentacion de la declaracion"])
+
+    lista = client.get("/api/v1/tax-calendar/uploads", headers=_admin_h()).json()["uploads"]
+    assert [u["filename"] for u in lista][:2] == ["segundo.pdf", "primero.pdf"]
+
+
+def test_reimportar_el_mismo_pdf_no_duplica_archivos():
+    _limpiar()
+    _limpiar_uploads()
+    r1, _ = _subir_pdf("mismo.pdf", DIAN_LINES)
+    r2, _ = _subir_pdf("mismo.pdf", DIAN_LINES)
+
+    id1, id2 = r1.json()["upload"]["id"], r2.json()["upload"]["id"]
+    assert id1 == id2, "el mismo contenido debe producir el mismo id"
+    lista = client.get("/api/v1/tax-calendar/uploads", headers=_admin_h()).json()["uploads"]
+    assert len([u for u in lista if u["id"] == id1]) == 1
+
+
+def test_upload_download_devuelve_el_pdf_original():
+    _limpiar()
+    _limpiar_uploads()
+    r, pdf = _subir_pdf("para_descargar.pdf", DIAN_LINES)
+    uid = r.json()["upload"]["id"]
+
+    d = client.get(f"/api/v1/tax-calendar/uploads/{uid}/download", headers=_admin_h())
+    assert d.status_code == 200
+    assert d.content == pdf
+    assert "para_descargar.pdf" in d.headers.get("content-disposition", "")
+
+
+def test_upload_delete_borra_fila_y_archivo():
+    _limpiar()
+    _limpiar_uploads()
+    from app.services import tax_uploads
+
+    r, _ = _subir_pdf("borrable.pdf", DIAN_LINES)
+    uid = r.json()["upload"]["id"]
+    assert tax_uploads.resolve(uid) is not None
+
+    d = client.delete(f"/api/v1/tax-calendar/uploads/{uid}", headers=_admin_h())
+    assert d.status_code == 200
+    assert tax_uploads.resolve(uid) is None, "el archivo debe borrarse del disco"
+    lista = client.get("/api/v1/tax-calendar/uploads", headers=_admin_h()).json()
+    assert uid not in [u["id"] for u in lista["uploads"]]
+    # un segundo intento ya no encuentra nada
+    assert client.delete(f"/api/v1/tax-calendar/uploads/{uid}", headers=_admin_h()).status_code == 404
+
+
+def test_uploads_solo_admin():
+    _limpiar()
+    _limpiar_uploads()
+    r, _ = _subir_pdf("privado.pdf", DIAN_LINES)
+    uid = r.json()["upload"]["id"]
+
+    assert client.get("/api/v1/tax-calendar/uploads").status_code in (401, 403)
+    assert client.get(f"/api/v1/tax-calendar/uploads/{uid}/download").status_code in (401, 403)
+    assert client.delete(f"/api/v1/tax-calendar/uploads/{uid}").status_code in (401, 403)
+
+
+def test_id_desconocido_devuelve_404():
+    _limpiar_uploads()
+    assert client.get("/api/v1/tax-calendar/uploads/ffff0000ffff0000/download",
+                      headers=_admin_h()).status_code == 404
+    # un id con traversal o caracteres raros tampoco se acepta
+    assert client.delete("/api/v1/tax-calendar/uploads/..%2F..%2Fetc", headers=_admin_h()).status_code == 404
+
+
+def test_import_invalido_no_guarda_archivo():
+    _limpiar()
+    _limpiar_uploads()
+    from app.services import tax_uploads
+
+    r = client.post(
+        "/api/v1/tax-calendar/import?year=2026",
+        files={"file": ("sin_fechas.pdf", make_pdf(["Hola mundo"]), "application/pdf")},
+        headers=_admin_h(),
+    )
+    assert r.status_code == 422
+    assert client.get("/api/v1/tax-calendar/uploads", headers=_admin_h()).json()["count"] == 0
+    assert not tax_uploads.TAX_DIR.exists() or not any(tax_uploads.TAX_DIR.iterdir()), \
+        "un PDF que no importa nada no debe quedarse en el almacén"
