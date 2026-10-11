@@ -58,7 +58,9 @@ export const api = {
     ).toString();
     return req(`/donations${qs ? `?${qs}` : ""}`, { token });
   },
-  agentChat: (message) => req("/agent/chat", { method: "POST", body: { message } }),
+  agentChat: (message, sessionId, channel = "web") =>
+    req("/agent/chat", { method: "POST", body: { message, session_id: sessionId || null, channel } }),
+  agentSession: (sessionId, token, channel = "web") => req(`/agent/conversations/${sessionId}?channel=${channel}`, { token }),
   knowledge: (token) => req("/agent/knowledge", { token }),
   addKnowledge: (token, doc) => req("/agent/knowledge", { token, method: "POST", body: doc }),
   summary: (token) => req("/account/summary", { token }),

@@ -78,14 +78,23 @@ def retrieve(db: Session, question: str, k: int = 2) -> list[Hit]:
     return [h for h in scored[:k] if h.score > 0]
 
 
-def answer(db: Session, question: str) -> dict:
-    """CONSULTA_GENERAL: recupera contexto y genera respuesta (LLM o extractiva)."""
+def answer(db: Session, question: str, history: list[dict] | None = None) -> dict:
+    """CONSULTA_GENERAL: recupera contexto y genera respuesta (LLM o extractiva).
+
+    `history` (turnos [{role,text}]) solo se usa cuando hay LLM configurado:
+    permite responder "¿y eso cuándo vence?" entendiendo a qué se refería el
+    usuario. Sin key el modo extractivo es independiente del contexto.
+    """
     hits = retrieve(db, question)
     if not hits:
         return {"reply": "Aún no tengo información sobre eso. Escríbenos a cytechfoundation@gmail.com.", "sources": []}
     context = "\n".join(f"[{h.title}] {h.content}" for h in hits)
+    prompt = f"Contexto RAG:\n{context}\n\nPregunta: {question}"
+    if history:
+        previo = "\n".join(f"{h.get('role', 'user')}: {h.get('text', '')}" for h in history[-6:])
+        prompt = f"Conversación previa:\n{previo}\n\n{prompt}"
     try:
-        reply = llm_service.chat(SYSTEM, f"Contexto RAG:\n{context}\n\nPregunta: {question}")
+        reply = llm_service.chat(SYSTEM, prompt)
         mode = "rag+llm"
     except Exception:
         reply = f"Según nuestra base: {hits[0].content[:400]}"

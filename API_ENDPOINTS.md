@@ -31,14 +31,59 @@ Configuración personal y resumen de actividad.
 
 ---
 
-## 🤖 3. Agente AI y RAG
-Interacción con el modelo de lenguaje y gestión de conocimiento.
+## 🤖 3. Agente AI y RAG (diálogo multiturno)
+El asistente recuerda la conversación: puede **preguntar un dato en un turno y recibirlo en el siguiente** (slot-filling).
 
 | Método | Endpoint | Descripción | Auth |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/agent/chat` | Envía un mensaje al asistente y recibe respuesta. | ❌/✅ |
+| `POST` | `/agent/chat` | Envía un mensaje. Con `session_id` mantiene el flujo entre turnos; sin él responde de forma aislada. | ❌ |
+| `GET` | `/agent/conversations/{external_id}` | Inspecciona una sesión: flujo activo, paso, slots e historial. | ✅ (Admin) |
+| `DELETE` | `/agent/conversations/{external_id}` | Reinicia el estado de una sesión. | ❌ |
+| `POST` | `/agent/subscribe` | Suscripción directa por JSON (`{email}`). | ❌ |
 | `GET` | `/agent/knowledge` | Lista los documentos cargados en el RAG. | ✅ |
 | `POST` | `/agent/knowledge` | Sube un nuevo documento para entrenamiento. | ✅ |
+| `GET` | `/agent/subscribers` | Lista de suscriptores del boletín. | ✅ (Admin) |
+
+**Cuerpo de `POST /agent/chat`**
+
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `message` | string | Texto del usuario (obligatorio). |
+| `session_id` | string | Id de sesión del cliente. Web: uuid generado por el widget; WhatsApp: `wa:<número>`. `null` ⇒ estado sin memoria. |
+| `channel` | string | `web` (default) o `whatsapp`. Las sesiones se separan por canal. |
+
+**Respuesta**: `intent`, `success`, `reply`, `flow` (flujo activo o `null`), `step`, `suggestions` (chips para el cliente) y, en consultas RAG, `sources`.
+
+**Flujos guiados** (se activan por intención; cualquiera se cancela escribiendo "cancelar"):
+
+| Flujo | Disparadores | Pasos que recoge |
+| :--- | :--- | :--- |
+| `subscribe` | "quiero suscribirme", "newsletter", "boletín" | `email` |
+| `contact` | "contactar", "asesor", "hablar con" | `nombre` → `email` → `mensaje` (crea Lead y notifica) |
+| `tax` | "calendario", "tributario", "impuesto", "DIAN", "IVA", "retenciones" | `scope` (impuesto/periodo) y responde con RAG |
+
+### Ejemplo de diálogo multiturno (ReadyAPI / curl)
+```bash
+# Turno 1: el agente pide el correo y abre el flujo `subscribe`
+curl -X POST "http://localhost:8000/api/v1/agent/chat" -H "Content-Type: application/json" \
+  -d '{"message":"quiero suscribirme","session_id":"demo-1","channel":"web"}'
+# → {"intent":"FLUJO_PASO","flow":"subscribe","step":"email",
+#    "reply":"¡Genial! ¿A qué correo te suscribo? ...","suggestions":["Cancelar"]}
+
+# Turno 2: la respuesta del usuario completa el flujo
+curl -X POST "http://localhost:8000/api/v1/agent/chat" -H "Content-Type: application/json" \
+  -d '{"message":"mi correo es ana@correo.com","session_id":"demo-1","channel":"web"}'
+# → {"intent":"RESPONDER_SUSCRIPCION","flow":null,
+#    "reply":"Suscripción procesada y alerta enviada a ana@correo.com (canal: log)."}
+
+# Inspección de la sesión (admin)
+curl "http://localhost:8000/api/v1/agent/conversations/demo-1" -H "Authorization: Bearer <ADMIN_TOKEN>"
+# → {"external_id":"demo-1","channel":"web","flow":null,"step":null,
+#    "slots":{},"history":[{"role":"user",...},{"role":"bot",...}]}
+```
+En WhatsApp el notifier envía `session_id="wa:<número>"`, así que una conversación
+por teléfono también recuerda los datos entre mensajes.
+
 
 ---
 

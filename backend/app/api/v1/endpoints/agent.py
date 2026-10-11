@@ -1,24 +1,35 @@
-"""Orquestador del Agente IA: enrutamiento de intenciones + RAG + suscripciones."""
-import re
-from datetime import datetime, timezone
+"""Orquestador del Agente IA: diálogo multiturno (slots) + RAG + suscripciones.
+
+La lógica vive en `app.services.dialog_service`: aquí solo se expone la API.
+Noticias solo vía panel admin; el chat público es de consulta/suscripción.
+"""
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import require_admin
 from app.db.session import get_db
+from app.models.conversation import Conversation
 from app.models.knowledge import KnowledgeDoc
 from app.models.subscriber import Subscriber
 from app.models.user import User
-from app.services import email_service, events, rag_service
+from app.services import dialog_service, rag_service
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
 
 class ChatIn(BaseModel):
     message: str
+    session_id: str | None = Field(
+        default=None, max_length=120,
+        description="Id de sesión del cliente. Si se envía, el agente recuerda el diálogo "
+                    "entre turnos (slot-filling). Web: uuid generado en el widget; "
+                    "WhatsApp: número de teléfono. Sin session_id la respuesta es stateless.",
+    )
+    channel: str = Field(default="web", max_length=20, description="Canal: web | whatsapp")
 
 
 class KnowledgeIn(BaseModel):
@@ -41,53 +52,51 @@ class SubscribeIn(BaseModel):
     message: str = "¡Suscripción confirmada!"
 
 
-NEWS_RE = re.compile(r"noticia\s*:\s*(?P<title>[^|]+)\|\s*(?P<content>.+)", re.IGNORECASE | re.DOTALL)
-SUB_RE = re.compile(r"suscribir(?:me|se)?\s*:\s*(?P<email>\S+@\S+)", re.IGNORECASE)
-
-
-def _intent(message: str) -> tuple[str, dict]:
-    """Enrutador de intenciones (reglas; el LLM solo genera la respuesta final)."""
-    if m := NEWS_RE.search(message):
-        return "ACTUALIZAR_NOTICIA", {"title": m.group("title").strip(), "content": m.group("content").strip()}
-    if m := SUB_RE.search(message):
-        return "RESPONDER_SUSCRIPCION", {"email": m.group("email").strip()}
-    if "suscribir" in message.lower():
-        return "RESPONDER_SUSCRIPCION_AYUDA", {}
-    return "CONSULTA_GENERAL", {}
+class SessionOut(BaseModel):
+    external_id: str
+    channel: str
+    flow: str | None
+    step: str | None
+    slots: dict
+    history: list[dict]
+    updated_at: datetime
 
 
 @router.post("/chat")
 def chat(body: ChatIn, db: Session = Depends(get_db)):
-    """Punto único del asistente. Noticias solo vía panel admin (requiere rol)."""
+    """Punto único del asistente.
+
+    Con `session_id` el diálogo es multiturno: el agente puede pedir un dato
+    (correo, nombre, mensaje, impuesto) en un turno y usarlo en el siguiente.
+    Sin `session_id` responde de forma aislada (compatible con integraciones
+    que no guardan estado).
+    """
     if not body.message.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Mensaje vacío")
-    intent, data = _intent(body.message)
-    if intent == "ACTUALIZAR_NOTICIA":
-        return {"intent": intent, "success": False,
-                "reply": "Solo un Administrador puede indexar noticias (usa el panel Base de conocimiento)."}
-    if intent == "RESPONDER_SUSCRIPCION":
-        return _subscribe(db, data["email"], "¡Suscripción confirmada!")
-    if intent == "RESPONDER_SUSCRIPCION_AYUDA":
-        return {"intent": intent, "success": True,
-                "reply": "Para suscribirte escribe: suscribir: tu@correo.com"}
-    result = rag_service.answer(db, body.message)
-    return {"intent": "CONSULTA_GENERAL", "success": True, **result}
+    return dialog_service.handle(db, body.message, session_id=body.session_id, channel=body.channel)
 
 
-def _subscribe(db: Session, email: str, message: str) -> dict:
-    existing = db.scalar(select(Subscriber).where(Subscriber.email == email.lower()))
-    if existing is None:
-        db.add(Subscriber(email=email.lower()))
-        db.commit()
-    events.publish("cytech.subscriptions.created", {"email": email.lower()})
-    sent = email_service.send(email, "¡Suscripción confirmada! — Cytech", message)
-    return {"intent": "RESPONDER_SUSCRIPCION", "success": True,
-            "reply": f"Suscripción procesada y alerta enviada a {email} (canal: {sent['channel']})."}
+@router.get("/conversations/{external_id}", response_model=SessionOut)
+def get_conversation(external_id: str, channel: str = "web", db: Session = Depends(get_db),
+                     _: User = Depends(require_admin)):
+    """Inspección de una sesión del agente (estado, slots e historial). Admin."""
+    conv = db.scalar(select(Conversation).where(
+        Conversation.channel == channel.strip().lower(), Conversation.external_id == external_id))
+    if conv is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Sesión no encontrada")
+    return SessionOut(external_id=conv.external_id, channel=conv.channel, flow=conv.flow, step=conv.step,
+                      slots=conv.get_slots(), history=conv.get_history(), updated_at=conv.updated_at)
+
+
+@router.delete("/conversations/{external_id}", status_code=204)
+def delete_conversation(external_id: str, channel: str = "web", db: Session = Depends(get_db)):
+    """Reinicia una sesión del diálogo (el widget lo hace creando un uuid nuevo)."""
+    dialog_service.reset_conversation(db, external_id, channel)
 
 
 @router.post("/subscribe")
 def subscribe(body: SubscribeIn, db: Session = Depends(get_db)):
-    return _subscribe(db, str(body.email), body.message)
+    return dialog_service.subscribe_email(db, str(body.email), body.message)
 
 
 @router.get("/knowledge", response_model=list[KnowledgeOut])

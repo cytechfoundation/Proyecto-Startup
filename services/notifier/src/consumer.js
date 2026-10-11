@@ -9,11 +9,11 @@ const BACKEND = process.env.BACKEND_URL || "http://localhost:8000";
 const WA_TOKEN = process.env.WHATSAPP_TOKEN || "";
 const WA_PHONE_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || "";
 
-async function askAgent(text) {
+async function askAgent(text, sessionId, channel = "whatsapp") {
   const r = await fetch(`${BACKEND}/api/v1/agent/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: text }),
+    body: JSON.stringify({ message: text, session_id: sessionId, channel }),
   });
   const data = await r.json();
   return data.reply || "Gracias por escribir a Cytech. Te contactaremos pronto.";
@@ -52,7 +52,10 @@ async function handle(topic, payload) {
     case "cytech.whatsapp.incoming": {
       console.log(`[WhatsApp RAG]: Procesando mensaje de ${payload.from}: "${payload.text}"`);
       try {
-        const answer = await askAgent(payload.text);
+        // Sesión por número: el agente recuerda el flujo (ej. pidió el correo
+        // en el turno anterior) aunque el usuario responda en otro mensaje.
+        const sessionId = `wa:${payload.from}`;
+        const answer = await askAgent(payload.text, sessionId, "whatsapp");
         await sendWhatsapp(payload.from, answer);
         console.log(`[WhatsApp RAG]: Respuesta enviada exitosamente a ${payload.from}`);
       } catch (err) {
