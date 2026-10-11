@@ -34,5 +34,7 @@ Thumbs.db
 *.log
 
 # --- Datos en runtime (almacén de archivos de la capa de herramientas) ---
+# La regla /data/ va anclada a la raíz: sin el guion la ignoraría también
+# frontend/src/data (imágenes y metadatos del landing que sí van al repo).
 backend/data/
-data/
+/data/
