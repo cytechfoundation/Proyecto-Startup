@@ -104,6 +104,7 @@ export default function Navbar() {
             ) : (
               <div className="flex items-center gap-3">
                 <ModeToggle />
+                <Link to="/cuenta-nueva" className="hidden rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-300 transition-colors hover:border-cyan-400 sm:block">Crear cuenta</Link>
                 <button onClick={() => setOpen(true)} className="hidden rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg sm:block">Ingresar a Demo</button>
               </div>
             )}
@@ -121,6 +122,7 @@ export default function Navbar() {
             <a href="/#donar" onClick={() => setBurger(false)} className="block py-1 text-[var(--l-text)]">Donar</a>
             <a href="/#redes" onClick={() => setBurger(false)} className="block py-1 text-[var(--l-text)]">Redes</a>
             {!token && <button onClick={() => { setOpen(true); setBurger(false); }} className="mt-2 w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Ingresar a Demo</button>}
+            {!token && <Link to="/cuenta-nueva" onClick={() => setBurger(false)} className="mt-2 block w-full rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-5 py-2.5 text-center text-sm font-semibold text-cyan-300">Crear cuenta</Link>}
           </div>
         </div>
       </header>
