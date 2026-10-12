@@ -291,6 +291,61 @@ def userinfo_email(user_access_token: str) -> str:
     return ""
 
 
+# ---- Invoicing v2: facturas (create → send → seguimiento) ----
+def invoice_create(payload: dict) -> dict:
+    """POST /v2/invoicing/invoices: crea el borrador (201 + id de factura)."""
+    return _body(_call("POST", "/v2/invoicing/invoices", payload))
+
+
+def invoice_send(invoice_id: str, send_to_recipient: bool = True) -> dict:
+    """POST …/send. Con send_to_recipient=false la factura queda en estado de
+    pago SIN enviar correo: compartimos nosotros el link/QR hospedado."""
+    return _body(_call("POST", f"/v2/invoicing/invoices/{invoice_id}/send",
+                       {"send_to_recipient": send_to_recipient}))
+
+
+def invoice_get(invoice_id: str) -> dict:
+    """GET detalle: metadata.recipient_view_url es la página de pago hospedada."""
+    return _body(_call("GET", f"/v2/invoicing/invoices/{invoice_id}", prefer=False))
+
+
+def invoice_list(page: int = 1, page_size: int = 20) -> dict:
+    return _body(_call("GET", f"/v2/invoicing/invoices?page={page}&page_size={page_size}", prefer=False))
+
+
+def invoice_cancel(invoice_id: str) -> dict:
+    """POST …/cancel: solo facturas enviadas; queda CANCELLED."""
+    return _body(_call("POST", f"/v2/invoicing/invoices/{invoice_id}/cancel", {}))
+
+
+def invoice_reminder(invoice_id: str) -> dict:
+    """POST …/reminders: PayPal limita a 2 recordatorios/día por factura."""
+    return _body(_call("POST", f"/v2/invoicing/invoices/{invoice_id}/reminders", {}))
+
+
+def invoice_qr(invoice_id: str) -> dict:
+    """POST …/qr-code (factura en SENT): PNG en base64 que abre la página de pago."""
+    r = _call("POST", f"/v2/invoicing/invoices/{invoice_id}/qr-code?width=300&height=300", {})
+    try:
+        data = r.json()
+    except ValueError:  # si alguna vez devuelve bytes PNG crudos
+        import base64 as _b64
+        return {"image": _b64.b64encode(r.content).decode()}
+    if isinstance(data, dict) and not data.get("image"):
+        data["image"] = data.get("qr_code") or data.get("data") or ""
+    return data
+
+
+def invoice_record_payment(invoice_id: str, amount: str, currency: str = "USD",
+                           note: str = "") -> dict:
+    """POST …/payments: registra un pago externo (transferencia/efectivo)
+    → MARKED_AS_PAID / PARTIALLY_PAID sin pasar por PayPal."""
+    body: dict = {"amount": _money(amount, currency)}
+    if note:
+        body["note"] = note
+    return _body(_call("POST", f"/v2/invoicing/invoices/{invoice_id}/payments", body))
+
+
 # ---- Transaction Search (reemplazo de List Payments v1) ----
 def search_transactions(start_date: str, end_date: str, page_size: int = 20, page: int = 1) -> dict:
     """GET /v1/reporting/transactions. Sin equivalente de listado en Orders/Payments v2."""

@@ -47,6 +47,20 @@ export const api = {
   paypalCreateOrder: (token, body) => req("/payments/orders", { token, method: "POST", body }),
   paypalSearch: (token, start, end) =>
     req(`/payments/search?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}`, { token }),
+  invoices: (token, params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v))
+    ).toString();
+    return req(`/paypal/invoices${qs ? `?${qs}` : ""}`, { token });
+  },
+  invoiceCreate: (token, body) => req("/paypal/invoices", { token, method: "POST", body }),
+  invoiceSend: (token, id, sendEmail = true) =>
+    req(`/paypal/invoices/${id}/send?send_to_recipient=${sendEmail}`, { token, method: "POST", body: {} }),
+  invoiceDetail: (token, id) => req(`/paypal/invoices/${id}`, { token }),
+  invoiceReminder: (token, id) => req(`/paypal/invoices/${id}/reminders`, { token, method: "POST", body: {} }),
+  invoiceCancel: (token, id) => req(`/paypal/invoices/${id}/cancel`, { token, method: "POST", body: {} }),
+  invoiceQr: (token, id) => req(`/paypal/invoices/${id}/qr-code`, { token }),
+  invoicePay: (token, id, body) => req(`/paypal/invoices/${id}/payments`, { token, method: "POST", body }),
   lead: (body) => req("/leads", { method: "POST", body }),
   transactions: (token, params = {}) => {
     const qs = new URLSearchParams(

@@ -7,6 +7,7 @@ import { markStep } from "../services/onboarding.js";
 import AccountSidebar from "../components/AccountSidebar.jsx";
 import AccountSteps from "../components/AccountSteps.jsx";
 import Collapsible from "../components/Collapsible.jsx";
+import InvoicingPanel from "../components/InvoicingPanel.jsx";
 import ThemeSwitcher from "../components/ThemeSwitcher.jsx";
 import CalendarImporter from "../components/CalendarImporter.jsx";
 import ScholarshipCounter from "../components/ScholarshipCounter.jsx";
@@ -15,12 +16,6 @@ const INTEGRATIONS = [
   { id: "pos", name: "POS / Punto de venta", desc: "Sincroniza tickets, caja e inventario." },
   { id: "dian", name: "Facturación DIAN", desc: "Emisión y validación de documentos." },
   { id: "paypal", name: "PayPal · Pasarela de pagos", desc: "Vincula tu cuenta PayPal para cobrar.", needsAccount: true },
-];
-
-const DEMO_INVOICES = [
-  { id: "FV-1042", date: "2026-10-01", total: "$ 1.250.000", state: "Aceptada DIAN" },
-  { id: "FV-1041", date: "2026-09-28", total: "$ 860.000", state: "Aceptada DIAN" },
-  { id: "FV-1040", date: "2026-09-21", total: "$ 430.000", state: "En contingencia" },
 ];
 
 const DEMO_PAYMENTS = [
@@ -126,12 +121,10 @@ export default function Account() {
   const [checked, setChecked] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [delEmail, setDelEmail] = useState("");
-  const [invoices, setInvoices] = useState([]);
   const [payments, setPayments] = useState([]);
 
   useEffect(() => {
     if (!token) return;
-    api.transactions(token, { kind: "invoice", page_size: 20 }).then((d) => setInvoices(d.items || [])).catch(() => {});
     api.transactions(token, { kind: "payment", page_size: 20 }).then((d) => setPayments(d.items || [])).catch(() => {});
   }, [token]);
 
@@ -396,28 +389,7 @@ export default function Account() {
           )}
 
           {section === "facturas" && (
-            <div className="rounded-xl bg-[var(--t-surface)] p-5">
-              <h2 className="text-xl font-bold">Mis facturas</h2>
-              <p className="mt-1 text-sm text-[var(--t-muted)]">Documentos DIAN reales de tu cuenta (vía middleware).</p>
-              {invoices.length === 0 ? (
-                <p className="mt-4 text-sm text-[var(--t-muted)]">Sin facturas registradas.</p>
-              ) : (
-                <table className="mt-4 w-full text-sm">
-                  <thead className="text-left text-[var(--t-muted)]"><tr><th>Documento</th><th>Proveedor</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead>
-                  <tbody>
-                    {invoices.map((f) => (
-                      <tr key={f.id} className="border-t border-[var(--t-border)]">
-                        <td className="py-2 font-semibold">{f.external_id || f.id.slice(0, 8)}</td>
-                        <td className="uppercase">{f.provider}</td>
-                        <td>$ {(f.amount / 100).toLocaleString("es-CO")}</td>
-                        <td><span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs capitalize text-emerald-400">{f.state || f.status}</span></td>
-                        <td className="text-[var(--t-muted)]">{new Date(f.created_at).toLocaleDateString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+            <InvoicingPanel token={token} user={user} onConnect={() => select("integraciones")} />
           )}
 
           {section === "pagos" && (

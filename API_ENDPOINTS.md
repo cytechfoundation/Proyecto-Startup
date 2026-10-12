@@ -110,6 +110,14 @@ Flujos de PayPal v2 y capturas de donaciones.
 | `POST` | `/payments/donate/orders/{id}/capture` | Captura el pago de la donación. | ❌ |
 | `POST` | `/payments/orders` | Crea orden de pago personalizada. | ✅ |
 | `GET` | `/payments/search` | Busca transacciones por rango de fechas. | ✅ |
+| `POST` | `/paypal/invoices` | Crea una factura (borrador) y opcionalmente la envía (o la deja en estado de pago con `send_email=false`). Concilia en el libro. | ✅ (Admin) |
+| `GET` | `/paypal/invoices` | Lista facturas (proxy de PayPal). Quien no tiene `payments:view` solo ve las suyas. | ✅ |
+| `GET` | `/paypal/invoices/{id}` | Detalle de la factura + `pay_url` (página de pago hospedada). | ✅ |
+| `POST` | `/paypal/invoices/{id}/send` | Envía la factura (`?send_to_recipient=false` solo deja el link/QR). | ✅ (Admin) |
+| `POST` | `/paypal/invoices/{id}/reminders` | Recordatorio de pago (PayPal permite máx. 2/día). | ✅ (Admin) |
+| `POST` | `/paypal/invoices/{id}/cancel` | Cancela una factura enviada → `CANCELLED`. | ✅ (Admin) |
+| `GET` | `/paypal/invoices/{id}/qr-code` | QR PNG en base64 (+ `pay_url`) hacia la página de pago. | ✅ |
+| `POST` | `/paypal/invoices/{id}/payments` | Registra un pago externo (transferencia/efectivo) y lo concilia en el libro. | ✅ (Admin) |
 
 ---
 
