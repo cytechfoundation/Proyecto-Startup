@@ -96,6 +96,88 @@ def test_create_order_metodo_invalido():
         assert "payment_method" in str(e)
 
 
+def test_create_order_carrito_itemizado():
+    """Esquema completo del ejemplo oficial de PayPal: ítems, desglose, envío e instrucción."""
+    _, calls = _run(
+        lambda: paypal_service.create_order(
+            "100.00", "USD", "CAPTURE",
+            reference_id="d9f80740-38f0-11e8-b467-0ed5f89f718b",
+            description="Description of PU1", soft_descriptor="SOFT-1001",
+            processing_instruction="ORDER_COMPLETE_ON_PAYMENT_APPROVAL",
+            items=[{"name": "Item A", "category": "PHYSICAL_GOODS", "description": "Item A",
+                    "sku": "259483234816", "unit_amount": "100", "quantity": 1, "tax": "0"}],
+            shipping={"full_name": "John Doe", "address_line_1": "2211 N First Street",
+                      "address_line_2": "Building 17", "admin_area_2": "San Jose",
+                      "admin_area_1": "CA", "postal_code": "95131", "country_code": "US"},
+            breakdown={"shipping": "0", "handling": "0", "tax_total": "0", "shipping_discount": "0"},
+        ),
+        data={"id": "O-3", "status": "CREATED", "links": []},
+    )
+    body = calls["req"][2]["json"]
+    assert body["processing_instruction"] == "ORDER_COMPLETE_ON_PAYMENT_APPROVAL"
+    unit = body["purchase_units"][0]
+    assert unit["reference_id"] == "d9f80740-38f0-11e8-b467-0ed5f89f718b"
+    assert unit["description"] == "Description of PU1" and unit["soft_descriptor"] == "SOFT-1001"
+    assert unit["amount"]["breakdown"] == {
+        "item_total": {"currency_code": "USD", "value": "100.00"},
+        "shipping": {"currency_code": "USD", "value": "0"},
+        "handling": {"currency_code": "USD", "value": "0"},
+        "tax_total": {"currency_code": "USD", "value": "0"},
+        "shipping_discount": {"currency_code": "USD", "value": "0"},
+    }
+    item = unit["items"][0]
+    assert item["quantity"] == "1" and item["category"] == "PHYSICAL_GOODS"
+    assert item["sku"] == "259483234816" and item["description"] == "Item A"
+    assert item["tax"] == {"currency_code": "USD", "value": "0"}
+    assert unit["shipping"]["name"]["full_name"] == "John Doe"
+    assert unit["shipping"]["address"] == {
+        "address_line_1": "2211 N First Street", "address_line_2": "Building 17",
+        "admin_area_2": "San Jose", "admin_area_1": "CA", "postal_code": "95131",
+        "country_code": "US"}
+
+
+def test_create_order_desglose_con_envio_e_impuestos():
+    _, calls = _run(
+        lambda: paypal_service.create_order(
+            "121.00",
+            items=[{"name": "A", "unit_amount": "100.00", "quantity": 1}],
+            breakdown={"shipping": "10.00", "tax_total": "11.00"},
+        ),
+        data={"id": "O-4", "status": "CREATED", "links": []},
+    )
+    bd = calls["req"][2]["json"]["purchase_units"][0]["amount"]["breakdown"]
+    assert bd["item_total"]["value"] == "100.00"
+    assert bd["shipping"]["value"] == "10.00" and bd["tax_total"]["value"] == "11.00"
+
+
+def test_create_order_total_no_cuadra():
+    # 100 de ítems: ni 99 solo, ni 110 con solo 5 de envío (cuadraría con 10)
+    for amount, breakdown in (("99.00", None), ("110.00", {"shipping": "5.00"})):
+        try:
+            paypal_service.create_order(amount, items=[{"name": "A", "unit_amount": "100.00"}],
+                                        breakdown=breakdown)
+            raise AssertionError("debió fallar")
+        except Exception as e:
+            assert "cuadra" in str(e)
+
+
+def test_create_order_validaciones_esquema_completo():
+    casos = [
+        dict(processing_instruction="AHORA_NO"),
+        dict(items=[{"name": "A", "unit_amount": "1.00", "category": "SERVICIOS"}]),
+        dict(items=[{"name": "A", "unit_amount": "1.00"}], shipping={"country_code": "US"}),
+        dict(items=[{"name": "A", "unit_amount": "1.00"}],
+             shipping={"address_line_1": "calle 1", "country_code": "CO"},
+             breakdown={"shipping": "5.00"}),
+    ]
+    for extra in casos:
+        try:
+            paypal_service.create_order("1.00", **extra)
+            raise AssertionError(f"debió fallar: {extra}")
+        except Exception as e:
+            assert getattr(e, "status_code", 500) == 400
+
+
 def test_payment_methods_catalogo():
     assert {m["id"] for m in paypal_service.PAYMENT_METHODS} >= {"paypal", "card"}
 

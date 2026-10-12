@@ -123,25 +123,126 @@ def normalize_capture(data: dict) -> dict:
 
 
 # ---- Orders v2: ciclo de vida del pago ----
+ITEM_CATEGORIES = ("PHYSICAL_GOODS", "DIGITAL_GOODS", "DONATION")
+PROCESSING_INSTRUCTIONS = ("ORDER_COMPLETE_ON_PAYMENT_APPROVAL", "CAPTURE")
+
+
+def _nonneg_money(value: str, currency: str) -> dict:
+    """Monto >= 0 (campos del desglose admiten cero; _money exige positivo)."""
+    try:
+        v = float(str(value))
+    except (ValueError, TypeError):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Monto inválido")
+    if v < 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El monto no puede ser negativo")
+    return {"currency_code": currency, "value": str(value)}
+
+
+def _order_item(it: dict, currency: str) -> dict:
+    category = it.get("category")
+    if category and category not in ITEM_CATEGORIES:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            "category inválida (PHYSICAL_GOODS | DIGITAL_GOODS | DONATION)")
+    node: dict = {"name": it["name"], "unit_amount": _money(str(it["unit_amount"]), currency),
+                  "quantity": str(it.get("quantity", 1))}
+    if it.get("description"):
+        node["description"] = it["description"]
+    if it.get("sku"):
+        node["sku"] = it["sku"]
+    if category:
+        node["category"] = category
+    if it.get("tax") is not None:
+        node["tax"] = _nonneg_money(str(it["tax"]), currency)
+    return node
+
+
+def _order_breakdown(items: list, currency: str, amount: str, bd: dict) -> dict:
+    """Desglose del monto con ítems: item_total = suma de ítems; valida que
+    item_total + envío + manipulación + impuestos - descuento cuadre con el total."""
+    def _f(key: str) -> float:
+        try:
+            return float(str(bd.get(key, "0") or "0"))
+        except (ValueError, TypeError):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"breakdown.{key} inválido")
+
+    try:
+        item_total = sum(int(it.get("quantity", 1)) * float(str(it["unit_amount"])) for it in items)
+    except (ValueError, TypeError):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ítems inválidos")
+    shipping, handling = _f("shipping"), _f("handling")
+    tax_total, discount = _f("tax_total"), _f("shipping_discount")
+    esperado = item_total + shipping + handling + tax_total - discount
+    if abs(esperado - float(amount)) > 0.005:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            f"El total ({amount}) no cuadra con ítems + envío + impuestos - descuento ({esperado:.2f})")
+    return {
+        "item_total": _nonneg_money(f"{item_total:.2f}", currency),
+        "shipping": _nonneg_money(str(bd.get("shipping", "0") or "0"), currency),
+        "handling": _nonneg_money(str(bd.get("handling", "0") or "0"), currency),
+        "tax_total": _nonneg_money(str(bd.get("tax_total", "0") or "0"), currency),
+        "shipping_discount": _nonneg_money(str(bd.get("shipping_discount", "0") or "0"), currency),
+    }
+
+
+def _order_shipping(s: dict) -> dict:
+    if not s.get("address_line_1") or not s.get("country_code"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "shipping requiere address_line_1 y country_code")
+    addr: dict = {"address_line_1": s["address_line_1"], "country_code": s["country_code"]}
+    for key in ("address_line_2", "admin_area_2", "admin_area_1", "postal_code"):
+        if s.get(key):
+            addr[key] = s[key]
+    out: dict = {"address": addr}
+    if s.get("full_name"):
+        out["name"] = {"full_name": s["full_name"]}
+    return out
+
+
 def create_order(amount: str, currency: str = "USD", intent: str = "CAPTURE",
                  return_url: str = "", cancel_url: str = "",
                  invoice_id: str | None = None, custom_id: str | None = None,
-                 payment_method: str | None = None) -> dict:
+                 payment_method: str | None = None,
+                 reference_id: str | None = None, description: str | None = None,
+                 soft_descriptor: str | None = None,
+                 processing_instruction: str | None = None,
+                 items: list | None = None, shipping: dict | None = None,
+                 breakdown: dict | None = None) -> dict:
     """POST /v2/checkout/orders. intent CAPTURE|AUTHORIZE (mayúsculas).
 
     payment_method: card | paypal | google_pay | apple_pay → payment_source
     (APMs: presenta solo los métodos que quieres ofrecer; None = todos los elegibles).
+
+    Esquema completo opcional (carrito itemizado): ítems con categoría/sku/impuesto,
+    desglose del monto (auto-validado contra el total), envío con dirección,
+    reference_id/description/soft_descriptor y processing_instruction.
     """
     if intent not in ("CAPTURE", "AUTHORIZE"):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, 'intent debe ser CAPTURE o AUTHORIZE')
     if payment_method is not None and payment_method not in ("card", "paypal", "google_pay", "apple_pay"):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "payment_method inválido")
-    unit: dict = {"amount": _money(amount, currency)}
+    if processing_instruction is not None and processing_instruction not in PROCESSING_INSTRUCTIONS:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            "processing_instruction inválido (ORDER_COMPLETE_ON_PAYMENT_APPROVAL | CAPTURE)")
+    money = _money(amount, currency)
+    if items:
+        money["breakdown"] = _order_breakdown(items, currency, amount, breakdown or {})
+    unit: dict = {"amount": money}
+    if reference_id:
+        unit["reference_id"] = reference_id
+    if description:
+        unit["description"] = description
+    if soft_descriptor:
+        unit["soft_descriptor"] = soft_descriptor
     if invoice_id:
         unit["invoice_id"] = invoice_id
     if custom_id:
         unit["custom_id"] = custom_id
+    if items:
+        unit["items"] = [_order_item(it, currency) for it in items]
+    if shipping:
+        unit["shipping"] = _order_shipping(shipping)
     body: dict = {"intent": intent, "purchase_units": [unit]}
+    if processing_instruction:
+        body["processing_instruction"] = processing_instruction
     if payment_method:
         body["payment_source"] = {payment_method: {"experience_context": {
             "return_url": return_url or None, "cancel_url": cancel_url or None,

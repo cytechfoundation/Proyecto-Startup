@@ -108,7 +108,7 @@ Flujos de PayPal v2 y capturas de donaciones.
 | `POST` | `/donations` | Registra una intención de donación. | ❌ |
 | `POST` | `/payments/donate/orders` | Crea orden de PayPal para donación. | ❌ |
 | `POST` | `/payments/donate/orders/{id}/capture` | Captura el pago de la donación. | ❌ |
-| `POST` | `/payments/orders` | Crea orden de pago personalizada. | ✅ |
+| `POST` | `/payments/orders` | Crea orden de pago. Acepta el esquema completo v2: `items` (categoría/sku/impuesto), `breakdown` (auto-validado contra el total), `shipping` con dirección, `reference_id`, `description`, `soft_descriptor` y `processing_instruction` (`ORDER_COMPLETE_ON_PAYMENT_APPROVAL` \| `CAPTURE`). | ✅ (Admin) |
 | `GET` | `/payments/search` | Busca transacciones por rango de fechas. | ✅ |
 | `POST` | `/paypal/invoices` | Crea una factura (borrador) y opcionalmente la envía (o la deja en estado de pago con `send_email=false`). Concilia en el libro. | ✅ (Admin) |
 | `GET` | `/paypal/invoices` | Lista facturas (proxy de PayPal). Quien no tiene `payments:view` solo ve las suyas. | ✅ |

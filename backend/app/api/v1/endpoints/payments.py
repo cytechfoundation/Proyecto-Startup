@@ -2,7 +2,7 @@
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,34 @@ from app.services import card_errors, paypal_service
 router = APIRouter(prefix="/payments", tags=["payments"])
 
 
+class OrderItemIn(BaseModel):
+    name: str = Field(min_length=1, max_length=127)
+    unit_amount: str
+    quantity: int = Field(default=1, ge=1, le=100)
+    category: str | None = None  # PHYSICAL_GOODS | DIGITAL_GOODS | DONATION
+    description: str | None = None
+    sku: str | None = None
+    tax: str | None = None  # impuesto del ítem (monto, no porcentaje)
+
+
+class OrderShippingIn(BaseModel):
+    full_name: str = ""
+    address_line_1: str = ""
+    address_line_2: str | None = None
+    admin_area_2: str | None = None  # ciudad
+    admin_area_1: str | None = None  # estado / provincia
+    postal_code: str | None = None
+    country_code: str = ""  # ISO-3166 alfa-2
+
+
+class OrderBreakdownIn(BaseModel):
+    """Desglose del monto (solo tiene sentido con items)."""
+    shipping: str = "0"
+    handling: str = "0"
+    tax_total: str = "0"
+    shipping_discount: str = "0"
+
+
 class OrderIn(BaseModel):
     amount: str
     currency: str = "USD"
@@ -25,6 +53,14 @@ class OrderIn(BaseModel):
     invoice_id: str | None = None
     custom_id: str | None = None
     payment_method: str | None = None  # card | paypal | google_pay | apple_pay
+    # Esquema completo (opcional): carrito itemizado como en la referencia v2
+    reference_id: str | None = None
+    description: str | None = None
+    soft_descriptor: str | None = None
+    processing_instruction: str | None = None  # ORDER_COMPLETE_ON_PAYMENT_APPROVAL | CAPTURE
+    items: list[OrderItemIn] = []
+    shipping: OrderShippingIn | None = None
+    breakdown: OrderBreakdownIn | None = None
 
 
 class CaptureAuthIn(BaseModel):
@@ -110,9 +146,17 @@ def _ledger(db: Session, user_id: str, kind: str, data: dict, amount_cents: int 
 @router.post("/orders", dependencies=[Depends(RequirePermission("payments", "manage"))])
 def create(body: OrderIn, current: User = Depends(get_current_user),
            db: Session = Depends(get_db)):
-    out = paypal_service.create_order(body.amount, body.currency, body.intent,
-                                      body.return_url, body.cancel_url,
-                                      body.invoice_id, body.custom_id, body.payment_method)
+    out = paypal_service.create_order(
+        body.amount, body.currency, body.intent,
+        body.return_url, body.cancel_url,
+        body.invoice_id, body.custom_id, body.payment_method,
+        reference_id=body.reference_id, description=body.description,
+        soft_descriptor=body.soft_descriptor,
+        processing_instruction=body.processing_instruction,
+        items=[i.model_dump() for i in body.items] if body.items else None,
+        shipping=body.shipping.model_dump() if body.shipping else None,
+        breakdown=body.breakdown.model_dump() if body.breakdown else None,
+    )
     _ledger(db, current.id, "payment", out)
     return out
 
