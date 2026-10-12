@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -16,6 +16,8 @@ from app.api.v1.endpoints.webhooks import router as wh_router
 from app.core.security import create_access_token
 from app.db.base import Base
 from app.db.session import get_db
+from app.models.transaction import Transaction
+from app.models.user_integration import UserIntegration
 from app.services.auth_service import FederatedIdentity, get_or_create_user
 
 engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
@@ -119,3 +121,92 @@ def test_webhook_duplicado_idempotente():
 def test_webhooks_info():
     r = client.get("/api/v1/webhooks")
     assert r.status_code == 200 and "paypal" in str(r.json()["listeners"])
+
+
+def _seed(**kw) -> str:
+    db = TestingSession()
+    row = Transaction(**kw)
+    db.add(row)
+    db.commit()
+    rid = row.id
+    db.close()
+    return rid
+
+
+def test_webhook_concilia_pago_por_orden_relacionado():
+    _seed(provider="paypal", kind="payment", amount=0, currency="USD",
+          status="pending", external_id="ORDER-77")
+    r = client.post("/api/v1/webhooks/paypal", json={
+        "id": "WH-CAP-77", "event_type": "PAYMENT.CAPTURE.COMPLETED",
+        "resource": {"id": "CAP-77", "status": "COMPLETED",
+                     "amount": {"currency": "USD", "value": "25.00"},
+                     "supplementary_data": {"related_ids": {"order_id": "ORDER-77"}}}})
+    assert r.status_code == 200
+    assert r.json()["reconciled"] == {"actualizadas": 1, "creadas": 0}
+    db = TestingSession()
+    row = db.scalar(select(Transaction).where(Transaction.external_id == "ORDER-77"))
+    assert row.status == "completed" and row.amount == 2500 and row.currency == "USD"
+    db.close()
+
+
+def test_webhook_factura_pagada_concilia_pago():
+    _seed(provider="paypal", kind="invoice", amount=15000, currency="USD",
+          status="sent", external_id="INV2-900")
+    r = client.post("/api/v1/webhooks/paypal", json={
+        "id": "WH-INV-1", "event_type": "INVOICING.INVOICE.PAID",
+        "resource": {"id": "INV2-900", "status": "PAID",
+                     "amount": {"currency_code": "USD", "value": "150.00"}}})
+    assert r.status_code == 200
+    assert r.json()["reconciled"] == {"actualizadas": 1, "creadas": 1}
+    db = TestingSession()
+    inv = db.scalar(select(Transaction).where(
+        Transaction.external_id == "INV2-900", Transaction.kind == "invoice"))
+    pay = db.scalar(select(Transaction).where(
+        Transaction.external_id == "INV2-900", Transaction.kind == "payment"))
+    assert inv.status == "paid"
+    assert pay is not None and pay.amount == 15000 and pay.status == "completed"
+    db.close()
+    # Reintento de PayPal (otro event_id, misma factura): no duplica el pago
+    r2 = client.post("/api/v1/webhooks/paypal", json={
+        "id": "WH-INV-2", "event_type": "INVOICING.INVOICE.PAID",
+        "resource": {"id": "INV2-900", "status": "PAID",
+                     "amount": {"currency_code": "USD", "value": "150.00"}}})
+    assert r2.json()["reconciled"] == {"actualizadas": 0, "creadas": 0}
+    db = TestingSession()
+    pagos = db.scalars(select(Transaction).where(
+        Transaction.external_id == "INV2-900", Transaction.kind == "payment")).all()
+    assert len(pagos) == 1
+    db.close()
+
+
+def test_webhook_disputes_solo_alerta():
+    r = client.post("/api/v1/webhooks/paypal", json={
+        "id": "WH-DIS-1", "event_type": "CUSTOMER.DISPUTE.CREATED",
+        "resource": {"id": "D-1", "status": "OPEN"}})
+    assert r.status_code == 200
+    assert r.json()["reconciled"] == {"actualizadas": 0, "creadas": 0}
+
+
+def test_webhook_consent_revoked_desverifica_integracion():
+    db = TestingSession()
+    db.add(UserIntegration(user_id="u-wh-consent", provider="paypal", status="connected",
+                           account="revoked@mail.com", verified=True))
+    db.commit()
+    db.close()
+    r = client.post("/api/v1/webhooks/paypal", json={
+        "id": "WH-CONS-1", "event_type": "IDENTITY.AUTHORIZATION-CONSENT.REVOKED",
+        "resource": {"email": "revoked@mail.com"}})
+    assert r.status_code == 200
+    assert r.json()["reconciled"]["integraciones"] == 1
+    db = TestingSession()
+    row = db.scalar(select(UserIntegration).where(UserIntegration.account == "revoked@mail.com"))
+    assert row.verified is False
+    db.close()
+
+
+def test_webhooks_info_catalogo_ampliado():
+    evs = client.get("/api/v1/webhooks").json()["subscribed_events"]
+    assert "INVOICING.INVOICE.PAID" in evs
+    assert "CUSTOMER.DISPUTE.CREATED" in evs
+    assert "PAYMENT.CAPTURE.REVERSED" in evs
+    assert "IDENTITY.AUTHORIZATION-CONSENT.REVOKED" in evs

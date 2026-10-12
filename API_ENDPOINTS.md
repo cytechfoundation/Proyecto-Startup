@@ -96,7 +96,8 @@ Integración con Meta Cloud API y eventos externos.
 | :--- | :--- | :--- | :--- |
 | `GET` | `/whatsapp/webhook` | Validación de token (Handshake de Meta). | ❌ |
 | `POST` | `/whatsapp/webhook` | Recepción de mensajes en tiempo real. | ❌ |
-| `POST` | `/webhooks` | Ingesta de webhooks genéricos (PayPal, etc). | ❌ |
+| `GET` | `/webhooks` | Catálogo de listeners, eventos suscritos y política de reintentos. | ❌ |
+| `POST` | `/webhooks/{paypal\|dian\|pos}` | Ingesta de eventos: idempotencia por `event_id`, verificación de firma PayPal y **conciliación del libro** (capturas/reembolsos/órdenes actualizan la transacción por `external_id`; `INVOICING.INVOICE.PAID` registra el pago; disputas y revocación de consentimiento generan alerta en el bus de eventos). | ❌ (firma PayPal) |
 
 ---
 
