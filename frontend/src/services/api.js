@@ -34,6 +34,8 @@ export const api = {
   },
   me: (token) => req("/auth/me", { token }),
   demoLogin: (email) => req("/auth/demo", { method: "POST", body: { email } }),
+  register: (body) => req("/auth/register", { method: "POST", body }),
+  passwordLogin: (email, password) => req("/auth/login", { method: "POST", body: { email, password } }),
   integrations: (token) => req("/integrations", { token }),
   integrationsAll: (token) => req("/integrations/all", { token }),
   connect: (token, provider, account) => req(`/integrations/${provider}`, { token, method: "POST", body: { account } }),

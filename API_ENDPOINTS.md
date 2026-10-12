@@ -11,6 +11,8 @@ Gestión de acceso, sesiones y perfiles.
 
 | Método | Endpoint | Descripción | Auth |
 | :--- | :--- | :--- | :--- |
+| `POST` | `/auth/register` | Alta de cuenta con email+password (`201`, emite JWT). Política: ≥8, mayúscula y dígito; `terms: true` obligatorio. | ❌ |
+| `POST` | `/auth/login` | Login con email+password (cuentas `local`). Error único `401` si falla el email o la contraseña. | ❌ |
 | `POST` | `/auth/demo` | Acceso rápido mediante email (demo). | ❌ |
 | `GET` | `/auth/me` | Obtiene el perfil del usuario autenticado. | ✅ |
 | `GET` | `/users` | Lista de usuarios (paginado). | ✅ (Admin) |

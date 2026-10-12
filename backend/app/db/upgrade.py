@@ -17,6 +17,11 @@ _NUEVAS_COLUMNAS: tuple[tuple[str, str], ...] = (
     ("source", "VARCHAR(255)"),
 )
 
+# Columnas nuevas de `users` (registro local con contraseña).
+_NUEVAS_COLUMNAS_USERS: tuple[tuple[str, str], ...] = (
+    ("password_hash", "VARCHAR(255)"),
+)
+
 
 def upgrade_tax_calendar(engine) -> dict:
     """Aplica los ALTERs pendientes sobre `tax_calendar` y corrige los datos.
@@ -65,3 +70,23 @@ def upgrade_tax_calendar(engine) -> dict:
         db.commit()
 
     return {"aplicadas": aplicadas, "backfill": backfill, "obligaciones_limpias": limpias}
+
+
+def upgrade_users(engine) -> dict:
+    """Aplica los ALTERs pendientes sobre `users` (registro local con contraseña).
+
+    Idempotente: si la tabla ya tiene la columna, no toca nada.
+    """
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return {"aplicadas": []}
+
+    existentes = {col["name"] for col in inspector.get_columns("users")}
+    aplicadas: list[str] = []
+    with engine.begin() as conn:
+        for nombre, ddl in _NUEVAS_COLUMNAS_USERS:
+            if nombre in existentes:
+                continue
+            conn.execute(text(f"ALTER TABLE users ADD COLUMN {nombre} {ddl}"))
+            aplicadas.append(nombre)
+    return {"aplicadas": aplicadas}

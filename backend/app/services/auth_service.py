@@ -1,9 +1,15 @@
-"""Núcleo de autenticación federada.
+"""Núcleo de autenticación.
 
-- Valida criptográficamente el token del IdP (Google: JWKS/aud/iss/exp; GitHub: token activo).
-- Autocrea el usuario si el email no existe. PROHIBIDO crear usuarios manuales.
-- Rol automático: *@cytech.com → admin, resto → client.
+- Federada: valida criptográficamente el token del IdP (Google: JWKS/aud/iss/exp;
+  GitHub: token activo) y autocrea el usuario si el email no existe.
+- Local: alta con email+password en POST /auth/register (provider "local"),
+  verificada con PBKDF2 en `verify_password`.
+- Rol automático en ambos caminos: *@cytech.com → admin, resto → client.
 """
+import hashlib
+import hmac
+import re
+import secrets
 from dataclasses import dataclass
 
 import httpx
@@ -33,6 +39,47 @@ def resolve_role(email: str) -> str:
     """Regla corporativa: dominio @cytech.com → admin, si no → client."""
     domain = email.rsplit("@", 1)[-1].lower().strip()
     return "admin" if domain == settings.admin_domain.lower() else "client"
+
+
+# --- Contraseñas (solo cuentas locales) -------------------------------------
+# PBKDF2-HMAC-SHA256 con 600k iteraciones (recomendación OWASP 2023).
+# Sin dependencias externas: hashlib de la stdlib.
+_PBKDF2_ITERATIONS = 600_000
+
+
+def password_policy_errors(password: str) -> list[str]:
+    """Política de contraseña: ≥8 caracteres, una mayúscula y un dígito."""
+    errors: list[str] = []
+    if len(password) < 8:
+        errors.append("al menos 8 caracteres")
+    if not re.search(r"[A-Z]", password):
+        errors.append("al menos una mayúscula")
+    if not re.search(r"\d", password):
+        errors.append("al menos un dígito")
+    return errors
+
+
+def hash_password(password: str) -> str:
+    """Devuelve `pbkdf2_sha256$<iteraciones>$<salt_hex>$<hash_hex>`."""
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, _PBKDF2_ITERATIONS)
+    return f"pbkdf2_sha256${_PBKDF2_ITERATIONS}${salt.hex()}${digest.hex()}"
+
+
+def verify_password(password: str, stored: str | None) -> bool:
+    """Comprobación constante en tiempo de un hash almacenado (o None → False)."""
+    if not stored:
+        return False
+    try:
+        algo, iterations, salt_hex, digest_hex = stored.split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        digest = hashlib.pbkdf2_hmac(
+            "sha256", password.encode("utf-8"), bytes.fromhex(salt_hex), int(iterations)
+        )
+        return hmac.compare_digest(digest.hex(), digest_hex)
+    except (ValueError, TypeError):
+        return False
 
 
 def _google_jwks() -> dict:
@@ -99,7 +146,7 @@ def verify_federated_credential(provider: str, credential: str) -> FederatedIden
 
 
 def get_or_create_user(db: Session, identity: FederatedIdentity) -> tuple[User, bool]:
-    """Autocreación federada. No existe ningún path de creación manual."""
+    """Autocreación federada. El único alta manual con contraseña es /auth/register."""
     from datetime import datetime, timezone
 
     existing = db.scalar(select(User).where(User.email == identity.email))

@@ -1,5 +1,10 @@
-"""Flujo OAuth2/OIDC: login (302) → callback (canje) → autocreación → JWT propio."""
+"""Flujo OAuth2/OIDC: login (302) → callback (canje) → autocreación → JWT propio.
+
+También expone el alta local con contraseña (POST /auth/register) y su login
+(POST /auth/login); la sesión siempre termina en el mismo JWT propio.
+"""
 import secrets
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import httpx
@@ -13,13 +18,18 @@ from app.core.config import settings
 from app.core.security import create_access_token, get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import FederatedLoginIn, TokenOut, UserOut
+from app.schemas.user import FederatedLoginIn, PasswordLoginIn, RegisterIn, TokenOut, UserOut
+from app.services import events
 from app.services.auth_service import (
     FederatedIdentity,
     get_or_create_user,
+    hash_password,
+    password_policy_errors,
+    resolve_role,
     verify_federated_credential,
     verify_github_access_token,
     verify_google_id_token,
+    verify_password,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -107,6 +117,47 @@ def federated_login(body: FederatedLoginIn, db: Session = Depends(get_db)):
     """Login directo con credencial del IdP (Google One Tap / GIS). Sin registro manual."""
     identity = verify_federated_credential(body.provider, body.credential)
     user, _ = get_or_create_user(db, identity)
+    return _issue(user)
+
+
+@router.post("/register", response_model=TokenOut, status_code=status.HTTP_201_CREATED)
+def register(body: RegisterIn, db: Session = Depends(get_db)):
+    """Alta de cuenta con email+password (provider "local"). Emite JWT al instante."""
+    email = body.email.lower().strip()
+    name = body.name.strip()
+    if not body.terms:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Debes aceptar los términos y la política de privacidad")
+    policy = password_policy_errors(body.password)
+    if policy:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Contraseña débil: requiere {', '.join(policy)}")
+    if db.scalar(select(User).where(User.email == email)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Ese email ya está registrado. Inicia sesión.")
+    user = User(
+        email=email,
+        name=name or email,
+        provider="local",
+        role=resolve_role(email),  # ← misma regla @cytech.com que la vía federada
+        password_hash=hash_password(body.password),
+        terms_accepted_at=datetime.now(timezone.utc),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    events.publish("cytech.users.registered", {"email": user.email, "name": user.name, "role": user.role})
+    return _issue(user)
+
+
+@router.post("/login", response_model=TokenOut)
+def password_login(body: PasswordLoginIn, db: Session = Depends(get_db)):
+    """Login con email+password. Mensaje único si falla el email o la contraseña."""
+    user = db.scalar(select(User).where(User.email == body.email.lower().strip()))
+    if user is None or not verify_password(body.password, user.password_hash):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenciales inválidas")
+    if user.status != "active":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Usuario inactivo")
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(user)
     return _issue(user)
 
 

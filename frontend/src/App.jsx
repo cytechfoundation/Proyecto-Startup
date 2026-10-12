@@ -5,6 +5,7 @@ import FacturacionElectronica from "./pages/FacturacionElectronica.jsx";
 import TributaryCalendar from "./pages/TributaryCalendar.jsx";
 import BillingCalendar from "./pages/BillingCalendar.jsx";
 import Login from "./pages/Login.jsx";
+import SignUp from "./pages/SignUp.jsx";
 import Account from "./pages/Account.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import ChatWidget from "./components/ChatWidget.jsx";
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/calendario-tributario" element={<TributaryCalendar />} />
         <Route path="/calendario-facturacion" element={<BillingCalendar />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/cuenta-nueva" element={<SignUp />} />
         <Route path="/dashboard" element={<Guard><Dashboard /></Guard>} />
         <Route path="/cuenta" element={<Guard><Account /></Guard>} />
         <Route path="*" element={<Navigate to="/" replace />} />

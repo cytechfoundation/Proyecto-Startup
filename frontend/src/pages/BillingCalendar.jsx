@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { markStep } from "../services/onboarding.js";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, CalendarDays, BellRing, Repeat, AlertCircle } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
@@ -41,6 +42,9 @@ export default function BillingCalendar() {
   const [error, setError] = useState(null);
   // Eventos importados desde la BD (públicos, guardados por año).
   const [imported, setImported] = useState([]);
+
+  // Onboarding: visitar el calendario completa ese paso de bienvenida.
+  useEffect(() => { markStep("calendario"); }, []);
 
   useEffect(() => {
     let alive = true;

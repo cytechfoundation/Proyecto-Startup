@@ -7,6 +7,7 @@ import RbacMatrix from "../components/RbacMatrix.jsx";
 import DonationList from "../components/DonationList.jsx";
 import KnowledgePanel from "../components/KnowledgePanel.jsx";
 import PermissionTester from "../components/PermissionTester.jsx";
+import OnboardingChecklist from "../components/OnboardingChecklist.jsx";
 import ThemeSwitcher from "../components/ThemeSwitcher.jsx";
 
 /** Cambia de rol al instante con las cuentas demo (solo desarrollo). */
@@ -77,6 +78,8 @@ export default function Dashboard() {
       </header>
 
       {err && <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">{err}</p>}
+
+      <OnboardingChecklist userName={user?.name || user?.email?.split("@")[0]} />
 
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl bg-[var(--t-surface)] p-5"><p className="text-[var(--t-muted)]">Transacciones / min</p><p className="text-3xl font-extrabold text-[var(--t-accent)]">{stats.tps}</p></div>

@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { BellRing, Plug, Activity, Save, FileText, GraduationCap } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
+import { markStep } from "../services/onboarding.js";
 import AccountSidebar from "../components/AccountSidebar.jsx";
 import AccountSteps from "../components/AccountSteps.jsx";
 import Collapsible from "../components/Collapsible.jsx";
@@ -53,6 +54,11 @@ export default function Account() {
   useEffect(() => {
     if (token) api.summary(token).then(setSummary).catch(() => {});
   }, [token, user]);
+
+  // Onboarding de bienvenida: abrir Mi cuenta completa el paso de perfil y
+  // visitar la sección "Mis integraciones" completa el suyo.
+  useEffect(() => { markStep("perfil"); }, []);
+  useEffect(() => { if (section === "integraciones") markStep("integraciones"); }, [section]);
 
   const loadLinked = useCallback(async () => {
     if (!token) return;

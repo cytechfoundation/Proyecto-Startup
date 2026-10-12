@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Globe, GitBranch, ShieldCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
@@ -10,12 +10,13 @@ const DEMO_USERS = [
   { email: "demo.retail@gmail.com", label: "Cliente", desc: "Solo lectura" },
 ];
 
-/** Panel de acceso corporativo: federado + demo. Reusado en modal y página /login. */
+/** Panel de acceso corporativo: federado + contraseña + demo. Reusado en modal y página /login. */
 export default function LoginPanel({ onSuccess }) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState("");
+  const [pw, setPw] = useState({ email: "", password: "" });
 
   const go = (t) => {
     login(t);
@@ -31,6 +32,20 @@ export default function LoginPanel({ onSuccess }) {
       go(data.access_token);
     } catch {
       setErr("Demo no disponible: ejecuta `python seed_demo.py` en el backend.");
+    } finally {
+      setLoading("");
+    }
+  };
+
+  const passwordLogin = async (e) => {
+    e.preventDefault();
+    setErr("");
+    setLoading("pw");
+    try {
+      const data = await api.passwordLogin(pw.email, pw.password);
+      go(data.access_token);
+    } catch (ex) {
+      setErr(ex.message);
     } finally {
       setLoading("");
     }
@@ -62,6 +77,48 @@ export default function LoginPanel({ onSuccess }) {
 
       <div className="my-5 flex items-center gap-3 text-xs text-[var(--l-muted)]">
         <span className="h-px flex-1 bg-[var(--l-surface2)]" />
+        o con tu email
+        <span className="h-px flex-1 bg-[var(--l-surface2)]" />
+      </div>
+
+      <form onSubmit={passwordLogin} className="space-y-2.5">
+        <input
+          type="email"
+          autoComplete="email"
+          required
+          value={pw.email}
+          onChange={(e) => setPw((f) => ({ ...f, email: e.target.value }))}
+          placeholder="Correo electrónico"
+          aria-label="Correo electrónico"
+          className="w-full rounded-lg border border-[var(--l-border)] bg-[var(--l-surface2)] px-3.5 py-2.5 text-sm text-[var(--l-text)] placeholder:text-[var(--l-muted)] outline-none transition-all focus:border-[var(--l-accent)]"
+        />
+        <input
+          type="password"
+          autoComplete="current-password"
+          required
+          value={pw.password}
+          onChange={(e) => setPw((f) => ({ ...f, password: e.target.value }))}
+          placeholder="Contraseña"
+          aria-label="Contraseña"
+          className="w-full rounded-lg border border-[var(--l-border)] bg-[var(--l-surface2)] px-3.5 py-2.5 text-sm text-[var(--l-text)] placeholder:text-[var(--l-muted)] outline-none transition-all focus:border-[var(--l-accent)]"
+        />
+        <button
+          type="submit"
+          disabled={loading === "pw"}
+          className="w-full rounded-lg bg-gradient-to-r from-[var(--l-accent)] to-[var(--l-accent2)] px-4 py-2.5 text-sm font-bold text-white transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading === "pw" ? "Entrando…" : "Entrar con contraseña"}
+        </button>
+        <p className="pt-1 text-center text-xs text-[var(--l-muted)]">
+          ¿No tienes cuenta?{" "}
+          <Link to="/cuenta-nueva" className="font-semibold text-[var(--l-accent)] hover:underline">
+            Crear cuenta
+          </Link>
+        </p>
+      </form>
+
+      <div className="my-5 flex items-center gap-3 text-xs text-[var(--l-muted)]">
+        <span className="h-px flex-1 bg-[var(--l-surface2)]" />
         entorno de demostración
         <span className="h-px flex-1 bg-[var(--l-surface2)]" />
       </div>
@@ -85,7 +142,7 @@ export default function LoginPanel({ onSuccess }) {
       {err && <p className="mt-3 text-xs text-red-400">{err}</p>}
 
       <p className="mt-5 rounded-lg border border-[var(--l-border)] bg-[var(--l-surface)] p-3 text-xs leading-relaxed text-[var(--l-muted)]">
-        Sin contraseñas ni registro manual. Tu cuenta se crea automáticamente:{" "}
+        ¿Nuevo aquí? Crea tu cuenta con email y contraseña. En la vía federada la cuenta se crea sola:{" "}
         <b className="text-[var(--l-text)]">@cytech.com → Administrador</b>, otro dominio → Cliente.
       </p>
     </div>

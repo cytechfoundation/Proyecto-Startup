@@ -1,4 +1,4 @@
-"""Tabla User: id, email, name, provider, role, created_at."""
+"""Tabla User: id, email, name, provider, role, created_at, password_hash (opcional)."""
 import uuid
 from datetime import datetime, timezone
 
@@ -19,7 +19,9 @@ class User(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
-    provider: Mapped[str] = mapped_column(String(20), nullable=False)  # "google" | "github"
+    provider: Mapped[str] = mapped_column(String(20), nullable=False)  # "google" | "github" | "local"
+    # Solo cuentas "local" (POST /auth/register); los usuarios federados quedan en NULL.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="client")  # admin | editor | client
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")  # active | inactive
     company: Mapped[str | None] = mapped_column(String(200), nullable=True, default=None)

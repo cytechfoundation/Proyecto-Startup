@@ -20,10 +20,11 @@ from app.models import conversation, donation, impact_counter, knowledge, lead, 
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
     # `create_all` no anade columnas a tablas ya existentes: aplica los ALTERs
-    # pendientes de `tax_calendar` (year/source) y rellena los datos historicos.
-    from app.db.upgrade import upgrade_tax_calendar
+    # pendientes de `tax_calendar` (year/source) y de `users` (password_hash).
+    from app.db.upgrade import upgrade_tax_calendar, upgrade_users
 
     upgrade_tax_calendar(engine)
+    upgrade_users(engine)
     yield
 
 

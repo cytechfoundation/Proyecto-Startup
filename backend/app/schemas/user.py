@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 Role = Literal["admin", "editor", "client"]
 Status = Literal["active", "inactive"]
@@ -38,6 +38,22 @@ class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class RegisterIn(BaseModel):
+    """Alta de cuenta con email+password (provider "local")."""
+
+    name: str = Field(min_length=2, max_length=200)
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=128)  # política real: en auth_service
+    terms: bool = False
+
+
+class PasswordLoginIn(BaseModel):
+    """Login con email+password para cuentas locales."""
+
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=128)
 
 
 class RoleUpdateIn(BaseModel):
