@@ -97,7 +97,7 @@ Integración con Meta Cloud API y eventos externos.
 | `GET` | `/whatsapp/webhook` | Validación de token (Handshake de Meta). | ❌ |
 | `POST` | `/whatsapp/webhook` | Recepción de mensajes en tiempo real. | ❌ |
 | `GET` | `/webhooks` | Catálogo de listeners, eventos suscritos y política de reintentos. | ❌ |
-| `POST` | `/webhooks/{paypal\|dian\|pos}` | Ingesta de eventos: idempotencia por `event_id`, verificación de firma PayPal y **conciliación del libro** (capturas/reembolsos/órdenes actualizan la transacción por `external_id`; `INVOICING.INVOICE.PAID` registra el pago; disputas y revocación de consentimiento generan alerta en el bus de eventos). | ❌ (firma PayPal) |
+| `POST` | `/webhooks/{paypal\|dian\|pos}` | Ingesta de eventos: idempotencia por `event_id`, verificación de firma PayPal y **conciliación del libro** (capturas/reembolsos/órdenes actualizan la transacción por `external_id`; `INVOICING.INVOICE.PAID` registra el pago; en DIAN, un payload con `{cufe, event}` avanza la hoja de vida RADIAN de esa FEV); disputas y revocación de consentimiento generan alerta en el bus de eventos. | ❌ (firma PayPal) |
 
 ---
 
@@ -283,6 +283,29 @@ curl -X POST "http://localhost:8000/api/v1/impact/counters/becas/adjust" \
   -d '{"delta": 1}'
 # → {"key":"becas","value":101,"label":"Becas de estudio","unit":"becas","updated_at":"…"}
 ```
+
+---
+
+## 🏛 12. RADIAN · Títulos valor (FEV)
+Registro, consulta y trazabilidad de las Facturas Electrónicas de Venta (FEV) como **Título Valor**
+según el sistema de facturación de la DIAN: cada FEV acumula una **hoja de vida** de eventos
+(emisión → validación → aceptación/rechazo → endoso → pago/anulación) con máquina de estados
+validada (un salto inválido responde `409` con los eventos permitidos).
+
+| Método | Endpoint | Descripción | Auth |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/radian/records` | Listado paginado. Filtros: `estado`, `nit` (emisor o adquirente), `q` (CUFE o número), `all=true` (solo admin: todas; el resto solo las propias). | ✅ (view) |
+| `POST` | `/radian/records` | Registra una FEV como Título Valor: genera el CUFE y abre la hoja de vida (evento `emision`). Cuerpo: `{numero, nit_emisor, nit_adquirente, valor_total (centavos), moneda}`. | ✅ (create) |
+| `GET` | `/radian/records/{id}` | Detalle de la FEV con su hoja de vida completa. | ✅ (view) |
+| `GET` | `/radian/records/{id}/events` | Solo los eventos, ordenados cronológicamente. | ✅ (view) |
+| `POST` | `/radian/records/{id}/events` | Registra un evento (`validacion`, `aceptacion_expresa`, `aceptacion_tacita`, `rechazo`, `endoso`, `pago`, `anulacion`). `endoso` exige `endosatario_nit`; `pago` admite `monto_cents`. | ✅ (create) |
+| `GET` | `/radian/catalog` | Catálogo de estados, eventos y matriz de transiciones (para poblar la UI). | ✅ |
+
+RBAC sobre el recurso `dian` (view: admin/editor/client · create: admin/editor); el cliente solo ve
+las FEV registradas a su nombre. Los webhooks `POST /webhooks/dian` con `{cufe, event}` avanzan la
+hoja de vida correspondiente (idempotente ante eventos inválidos: responde `200` con
+`"aplicado": false`). En este entorno el CUFE es determinista (modo simulado): la validación real
+exige proveedor tecnológico autorizado.
 
 ---
 

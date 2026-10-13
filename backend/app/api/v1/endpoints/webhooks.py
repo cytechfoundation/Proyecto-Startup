@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models.transaction import Transaction
 from app.models.user_integration import UserIntegration
-from app.services import events, paypal_service
+from app.services import events, paypal_service, radian_service
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
@@ -131,6 +131,51 @@ def _revocar_consentimiento(db: Session, resource: dict) -> int:
     return len(rows)
 
 
+# Evento webhook DIAN → evento de la hoja de vida RADIAN.
+DIAN_EVENT_MAP = {
+    "validated": "validacion",
+    "accepted": "aceptacion_expresa",
+    "accepted_implied": "aceptacion_tacita",
+    "rejected": "rechazo",
+    "endorsed": "endoso",
+    "paid": "pago",
+    "voided": "anulacion",
+    "annulled": "anulacion",
+}
+
+
+def _reconcile_radian(db: Session, payload: dict) -> dict:
+    """Un webhook DIAN con CUFE avanza la hoja de vida RADIAN de esa FEV.
+
+    Payload esperado: {cufe, event} (+opcional monto/valor, endosatario_nit,
+    detalle). Si la transición no es válida, se reporta sin romper el 2xx.
+    """
+    node = payload.get("resource") if isinstance(payload.get("resource"), dict) else payload
+    cufe = str(node.get("cufe") or "")
+    if not cufe:
+        return {"aplicado": False, "motivo": "sin cufe"}
+    record = radian_service.find_by_cufe(db, cufe)
+    if record is None:
+        return {"aplicado": False, "motivo": "cufe desconocido"}
+    raw_event = str(node.get("event") or node.get("event_type") or node.get("status") or "").lower()
+    tipo = DIAN_EVENT_MAP.get(raw_event, raw_event if raw_event in radian_service.EVENT_TYPES else "")
+    if not tipo:
+        return {"aplicado": False, "motivo": f"evento no reconocido: {raw_event or 'vacío'}"}
+    monto = node.get("monto_cents") or node.get("amount_cents")
+    try:
+        out = radian_service.apply_event(
+            db, record, tipo, actor="dian",
+            detalle=str(node.get("detalle") or node.get("detail") or f"Evento desde webhook DIAN ({raw_event})."),
+            monto_cents=int(monto) if monto is not None else None,
+            endosatario_nit=node.get("endosatario_nit"),
+        )
+    except ValueError as e:
+        return {"aplicado": False, "motivo": str(e)}
+    if out is None:
+        return {"aplicado": False, "motivo": f"'{tipo}' inválido desde '{record.estado}'"}
+    return {"aplicado": True, "estado": record.estado}
+
+
 @router.get("")
 def info():
     """Nuestras URLs de escucha y política de reintentos (hasta 10 URLs por app PayPal)."""
@@ -212,4 +257,11 @@ async def ingest(provider: str, request: Request, db: Session = Depends(get_db))
         events.publish(_topic(event_type), {"event_type": event_type,
                                             "resource_id": payload["resource"].get("id"),
                                             "status": payload["resource"].get("status")})
+    elif provider == "dian":
+        try:  # un webhook con CUFE avanza la hoja de vida RADIAN de esa FEV
+            result["reconciled"] = _reconcile_radian(db, payload)
+        except Exception as e:
+            result["reconciled"] = {"error": str(e)}
+        events.publish("cytech.dian.webhook", {"event": payload.get("event") or payload.get("event_type"),
+                                               "cufe": payload.get("cufe")})
     return result

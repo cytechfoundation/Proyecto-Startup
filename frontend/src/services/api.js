@@ -61,6 +61,16 @@ export const api = {
   invoiceCancel: (token, id) => req(`/paypal/invoices/${id}/cancel`, { token, method: "POST", body: {} }),
   invoiceQr: (token, id) => req(`/paypal/invoices/${id}/qr-code`, { token }),
   invoicePay: (token, id, body) => req(`/paypal/invoices/${id}/payments`, { token, method: "POST", body }),
+  radianRecords: (token, params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v))
+    ).toString();
+    return req(`/radian/records${qs ? `?${qs}` : ""}`, { token });
+  },
+  radianRecordCreate: (token, body) => req("/radian/records", { token, method: "POST", body }),
+  radianRecordDetail: (token, id) => req(`/radian/records/${id}`, { token }),
+  radianEventCreate: (token, id, body) => req(`/radian/records/${id}/events`, { token, method: "POST", body }),
+  radianCatalog: (token) => req("/radian/catalog", { token }),
   lead: (body) => req("/leads", { method: "POST", body }),
   transactions: (token, params = {}) => {
     const qs = new URLSearchParams(

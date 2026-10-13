@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  LayoutDashboard, User, Plug, ReceiptText, CreditCard, ShieldCheck, FileText, LogOut, ChevronDown, CalendarDays,
+  LayoutDashboard, User, Plug, ReceiptText, CreditCard, ShieldCheck, FileText, LogOut, ChevronDown, CalendarDays, Landmark,
 } from "lucide-react";
 import ThemeSwitcher from "./ThemeSwitcher.jsx";
 
@@ -16,11 +16,12 @@ export const ACCOUNT_SECTIONS = [
 const FACT_CHILDREN = [
   { id: "facturas", label: "Mis facturas", Icon: ReceiptText },
   { id: "pagos", label: "Mis pagos", Icon: CreditCard },
+  { id: "radian", label: "RADIAN", Icon: Landmark },
 ];
 
 export default function AccountSidebar({ user, section, onSelect, onLogout }) {
   const initial = (user?.name || user?.email || "?").trim().charAt(0).toUpperCase();
-  const factActive = ["facturas", "pagos"].includes(section);
+  const factActive = ["facturas", "pagos", "radian"].includes(section);
   const [factOpen, setFactOpen] = useState(factActive);
 
   return (

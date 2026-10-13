@@ -8,6 +8,7 @@ import AccountSidebar from "../components/AccountSidebar.jsx";
 import AccountSteps from "../components/AccountSteps.jsx";
 import Collapsible from "../components/Collapsible.jsx";
 import InvoicingPanel from "../components/InvoicingPanel.jsx";
+import RadianPanel from "../components/RadianPanel.jsx";
 import ThemeSwitcher from "../components/ThemeSwitcher.jsx";
 import CalendarImporter from "../components/CalendarImporter.jsx";
 import ScholarshipCounter from "../components/ScholarshipCounter.jsx";
@@ -390,6 +391,10 @@ export default function Account() {
 
           {section === "facturas" && (
             <InvoicingPanel token={token} user={user} onConnect={() => select("integraciones")} />
+          )}
+
+          {section === "radian" && (
+            <RadianPanel token={token} user={user} />
           )}
 
           {section === "pagos" && (
