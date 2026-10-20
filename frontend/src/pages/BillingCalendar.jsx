@@ -156,10 +156,10 @@ export default function BillingCalendar() {
   const goToday = () => { setYear(now.getFullYear()); setMonth(now.getMonth()); };
 
   const color = (t) =>
-    t === "dian" ? "bg-blue-500/10 text-blue-600 ring-blue-500/20"
+    t === "dian" ? "bg-[var(--dian-soft)] text-[var(--dian-strong)] ring-[var(--dian-ring)]"
     : t === "importado" ? "bg-violet-500/10 text-violet-600 ring-violet-500/20"
     : t === "factura" ? "bg-amber-500/10 text-amber-600 ring-amber-500/20"
-    : "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20";
+    : "bg-sky-500/10 text-sky-600 ring-sky-500/20";
 
   /** Vista semanal: la semana que contiene al día de referencia (hoy o el 1 del mes). */
   const weekCells = useMemo(() => {
@@ -181,18 +181,18 @@ export default function BillingCalendar() {
         {/* Encabezado */}
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-[var(--l-accent)]">Facturación · Calendario</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-[var(--dian)]">Facturación · Calendario</p>
             <h1 className="text-3xl font-extrabold">Calendario de Facturación</h1>
             <p className="mt-1 text-sm text-[var(--l-muted)]">Vencimientos DIAN, facturas, pagos recurrentes y alertas programadas.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => step(-1)} aria-label="Mes anterior" className="rounded-lg bg-[var(--l-surface)] p-2 ring-1 ring-[var(--l-border)] transition hover:ring-[var(--l-accent)]"><ChevronLeft className="h-4 w-4" /></button>
-            <span className="flex items-center gap-2 px-2 font-bold"><CalendarDays className="h-4 w-4 text-[var(--l-accent)]" />{MESES[month]} {year}</span>
-            <button onClick={() => step(1)} aria-label="Mes siguiente" className="rounded-lg bg-[var(--l-surface)] p-2 ring-1 ring-[var(--l-border)] transition hover:ring-[var(--l-accent)]"><ChevronRight className="h-4 w-4" /></button>
-            <button onClick={goToday} className="rounded-lg bg-[var(--l-surface)] px-3 py-2 text-xs font-semibold ring-1 ring-[var(--l-border)] transition hover:ring-[var(--l-accent)]">Hoy</button>
+            <button onClick={() => step(-1)} aria-label="Mes anterior" className="rounded-lg bg-[var(--l-surface)] p-2 ring-1 ring-[var(--l-border)] transition hover:bg-[var(--dian-soft)] hover:ring-[var(--dian-ring)] hover:text-[var(--dian-strong)]"><ChevronLeft className="h-4 w-4" /></button>
+            <span className="flex items-center gap-2 px-2 font-bold"><CalendarDays className="h-4 w-4 text-[var(--dian)]" />{MESES[month]} {year}</span>
+            <button onClick={() => step(1)} aria-label="Mes siguiente" className="rounded-lg bg-[var(--l-surface)] p-2 ring-1 ring-[var(--l-border)] transition hover:bg-[var(--dian-soft)] hover:ring-[var(--dian-ring)] hover:text-[var(--dian-strong)]"><ChevronRight className="h-4 w-4" /></button>
+            <button onClick={goToday} className="rounded-lg bg-[var(--l-surface)] px-3 py-2 text-xs font-semibold ring-1 ring-[var(--l-border)] transition hover:bg-[var(--dian-soft)] hover:text-[var(--dian-strong)] hover:ring-[var(--dian-ring)]">Hoy</button>
             <div className="ml-1 flex rounded-lg bg-[var(--l-surface)] p-1 ring-1 ring-[var(--l-border)]">
               {["mes", "semana"].map((v) => (
-                <button key={v} onClick={() => setView(v)} className={`rounded-md px-3 py-1 text-xs font-semibold capitalize transition-all duration-200 ${view===v?"bg-[var(--l-accent)] text-white":"text-[var(--l-muted)]"}`}>{v}</button>
+                <button key={v} onClick={() => setView(v)} className={`rounded-md px-3 py-1 text-xs font-semibold capitalize transition-all duration-200 ${view===v?"bg-[var(--dian-strong)] text-white shadow-sm":"text-[var(--l-muted)] hover:text-[var(--dian-strong)]"}`}>{v}</button>
               ))}
             </div>
           </div>
@@ -201,7 +201,7 @@ export default function BillingCalendar() {
         {/* Filtros + leyenda */}
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
           {[["todos","Todos"],["dian","Vencimientos DIAN"],["importado","Importados de la BD"],["factura","Facturas"],["pago","Pagos / promesas"]].map(([v,l]) => (
-            <button key={v} onClick={() => setFilter(v)} className={`rounded-full px-3 py-1.5 font-semibold ring-1 transition-all duration-200 ${filter===v?"bg-[var(--l-accent)] text-white ring-[var(--l-accent)]":"bg-[var(--l-surface)] text-[var(--l-muted)] ring-[var(--l-border)]"}`}>{l}</button>
+            <button key={v} onClick={() => setFilter(v)} className={`rounded-full px-3 py-1.5 font-semibold ring-1 transition-all duration-200 ${filter===v?"bg-[var(--dian-strong)] text-white ring-[var(--dian-strong)] shadow-sm":"bg-[var(--l-surface)] text-[var(--l-muted)] ring-[var(--l-border)] hover:text-[var(--dian-strong)] hover:ring-[var(--dian-ring)]"}`}>{l}</button>
           ))}
           <span className="ml-auto text-[var(--l-muted)]">{totalEventos} eventos en {MESES[month].toLowerCase()}</span>
         </div>
@@ -222,9 +222,9 @@ export default function BillingCalendar() {
                 const evs = eventosDia(d);
                 const today = isCurrent && d === now.getDate();
                 return (
-                  <div key={i} className={`min-h-[96px] border-t border-l border-[var(--l-border)] p-1.5 transition-colors ${d ? (today ? "bg-[var(--l-accent)]/5" : "hover:bg-[var(--l-surface2)]/50") : "bg-[var(--l-surface2)]/40"}`}>
+                  <div key={i} className={`min-h-[96px] border-t border-l border-[var(--l-border)] p-1.5 transition-colors ${d ? (today ? "bg-[var(--dian-soft)]" : "hover:bg-[var(--l-surface2)]/50") : "bg-[var(--l-surface2)]/40"}`}>
                     {d && (<>
-                      <p className={`text-xs font-bold ${today ? "inline-block rounded-full bg-[var(--l-accent)] px-1.5 text-white" : ""}`}>{d}</p>
+                      <p className={`text-xs font-bold ${today ? "inline-block rounded-full bg-[var(--dian-strong)] px-1.5 text-white" : ""}`}>{d}</p>
                       <div className="mt-1 space-y-1">
                         {evs.slice(0,3).map((e, j) => (
                           <p key={j} title={`${e.titulo} · ${e.detalle}`} className={`flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[10px] font-semibold ring-1 ${color(e.tipo)}`}>
@@ -245,10 +245,10 @@ export default function BillingCalendar() {
               const evs = eventosDia(d);
               const today = isCurrent && d === now.getDate();
               return (
-                <div key={i} className={`flex gap-3 rounded-xl border p-3 transition-colors ${today ? "border-[var(--l-accent)] bg-[var(--l-accent)]/5" : "border-[var(--l-border)] bg-[var(--l-surface)]"}`}>
+                <div key={i} className={`flex gap-3 rounded-xl border p-3 transition-colors ${today ? "border-[var(--dian-ring)] bg-[var(--dian-soft)]" : "border-[var(--l-border)] bg-[var(--l-surface)]"}`}>
                   <div className="w-14 shrink-0 text-center">
                     <p className="text-[10px] font-semibold uppercase text-[var(--l-muted)]">{d ? DIAS_SEM[i] : "—"}</p>
-                    <p className={`text-lg font-extrabold ${today ? "text-[var(--l-accent)]" : ""}`}>{d || "·"}</p>
+                    <p className={`text-lg font-extrabold ${today ? "text-[var(--dian-strong)]" : ""}`}>{d || "·"}</p>
                   </div>
                   <div className="flex flex-1 flex-wrap items-center gap-2">
                     {!d && <span className="text-xs text-[var(--l-muted)]">Fuera del mes</span>}
@@ -264,7 +264,7 @@ export default function BillingCalendar() {
         )}
 
         <p className="mt-4 text-xs text-[var(--l-muted)]">
-          Tip: los eventos DIAN vienen de <Link to="/calendario-tributario" className="font-semibold text-[var(--l-accent)]">/calendario-tributario</Link>.
+          Tip: los eventos DIAN vienen de <Link to="/calendario-tributario" className="font-semibold text-[var(--dian-strong)] hover:underline">/calendario-tributario</Link>.
           Los <b className="text-violet-600">importados</b> se guardan en la base de datos por año.
           {!token ? " Inicia sesión para ver tus facturas y pagos reales." : " Facturas y pagos se leen de tus transacciones reales."}
         </p>

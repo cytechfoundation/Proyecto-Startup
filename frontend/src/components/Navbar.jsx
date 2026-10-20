@@ -104,7 +104,7 @@ export default function Navbar() {
             ) : (
               <div className="flex items-center gap-3">
                 <ModeToggle />
-                <Link to="/cuenta-nueva" className="hidden rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-300 transition-colors hover:border-cyan-400 sm:block">Crear cuenta</Link>
+                <Link to="/cuenta-nueva" className="hidden rounded-lg border border-[var(--l-accent)]/35 bg-[var(--l-accent-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--l-accent)] transition-colors hover:border-[var(--l-accent)] sm:block">Crear cuenta</Link>
                 <button onClick={() => setOpen(true)} className="hidden rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg sm:block">Ingresar a Demo</button>
               </div>
             )}

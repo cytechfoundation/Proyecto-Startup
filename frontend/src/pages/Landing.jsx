@@ -12,9 +12,9 @@ import Footer from "../components/Footer.jsx";
 export default function Landing() {
   return (
     <div className="relative min-h-screen bg-[var(--l-bg)] text-[var(--l-text)] antialiased">
-      {/* Glow Effect: resplandores radiales en esquinas */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,#1E293B,transparent_60%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(6,182,212,0.08),transparent_50%)]" />
+      {/* Glow Effect: resplandores radiales en esquinas (tokens por modo) */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--l-glow-top),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,var(--l-glow-accent),transparent_50%)]" />
 
       <div className="relative">
         <Navbar />

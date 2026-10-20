@@ -3,7 +3,7 @@ import Reveal from "./Reveal.jsx";
 import { SOLUTIONS } from "../data/solutions.js";
 
 const card =
-  "block h-full bg-[var(--l-surface)] backdrop-blur-sm border border-[var(--l-border)] rounded-xl p-6 transition-all duration-300 hover:border-[var(--l-accent)] hover:bg-[var(--l-surface2)] hover:-translate-y-1";
+  "block h-full bg-[var(--l-surface)] border border-[var(--l-border)] rounded-xl p-6 elev-1 transition-all duration-300 hover:border-[var(--l-accent)] hover:bg-[var(--l-surface2)] hover:elev-2 hover:-translate-y-1";
 const icon = "text-[var(--l-accent)] bg-[var(--l-accent-soft)] p-2.5 rounded-lg w-fit";
 
 const segments = SOLUTIONS.filter((s) => s.kind === "segmento");

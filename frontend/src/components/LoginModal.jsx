@@ -24,9 +24,9 @@ export default function LoginModal({ open, onClose }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md rounded-2xl border border-[var(--l-border)] bg-[var(--l-bg)] p-8 shadow-2xl shadow-cyan-500/10"
+        className="relative w-full max-w-md rounded-2xl border border-[var(--l-border)] bg-[var(--l-surface)] p-8 elev-2"
       >
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_top,#1E293B,transparent_65%)]" />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_top,var(--l-glow-top),transparent_65%)]" />
         <button
           onClick={onClose}
           aria-label="Cerrar"

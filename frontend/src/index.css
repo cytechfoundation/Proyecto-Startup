@@ -17,6 +17,8 @@ html {
   --t-accent: #22D3EE;
   --t-accent2: #2563EB;
   --t-accent-soft: rgba(34, 211, 238, .15);
+
+  /* --- Landing: tokens por modo (defaults = modo oscuro) --- */
   --l-bg: #0B0F19;
   --l-surface: #0D1527;
   --l-surface2: #101B45;
@@ -30,34 +32,78 @@ html {
   --l-warn: #FCD34D;
   --l-ok: #6EE7B7;
   --l-accent-soft: rgba(34, 211, 238, .12);
+  /* Elevación: en oscuro la profundidad la dan bordes + sombras casi negras. */
+  --l-elev-1: 0 1px 2px rgba(0, 0, 0, .5);
+  --l-elev-2: 0 12px 32px -12px rgba(0, 0, 0, .7);
+  /* Glows radiales reutilizables (reemplazan colores fijos en los componentes). */
+  --l-glow-top: #1E293B;
+  --l-glow-accent: rgba(6, 182, 212, .08);
+  /* Identidad verde DIAN (calendario tributario). En oscuro se aclara para brillar. */
+  --dian: #22C55E;
+  --dian-strong: #16A34A;
+  --dian-soft: rgba(34, 197, 94, .16);
+  --dian-ring: rgba(34, 197, 94, .34);
+  color-scheme: dark;
 }
 
-/* Modo claro de la página principal. */
+/* Modo claro de la página principal. Paleta fría, luminosa y con contraste AA. */
 html[data-mode="light"] {
-  --l-bg: #F4F7FC;
+  --l-bg: #F5F8FF;
   --l-surface: #FFFFFF;
-  --l-surface2: #EAF0F8;
-  --l-text: #0F172A;
-  --l-text2: #334155;
-  --l-muted: #5B6B82;
-  --l-border: #DCE4F0;
-  --l-accent: #0891B2;
-  --l-k1: #0E7490;
-  --l-k2: #0F766E;
+  --l-surface2: #ECF1FB;
+  --l-text: #0C1526;
+  --l-text2: #33445F;
+  --l-muted: #64748B;
+  --l-border: #E1E8F4;
+  --l-accent: #0E7490;
+  --l-k1: #0891B2;
+  --l-k2: #0D9488;
   --l-warn: #B45309;
   --l-ok: #047857;
-  --l-accent-soft: rgba(8, 145, 178, .10);
+  --l-accent-soft: rgba(10, 126, 164, .09);
+  /* Sombras azuladas y suaves: dan profundidad sin ensuciar el fondo claro. */
+  --l-elev-1: 0 1px 2px rgba(12, 21, 38, .04), 0 8px 24px -12px rgba(12, 21, 38, .10);
+  --l-elev-2: 0 10px 34px -12px rgba(12, 21, 38, .18);
+  /* Glows claros: en vez de mancha oscura, aportan un velo cian sutil. */
+  --l-glow-top: rgba(100, 116, 139, .10);
+  --l-glow-accent: rgba(8, 145, 178, .12);
+  /* Identidad verde DIAN: verde profundo oficial sobre fondo claro (AA). */
+  --dian: #0B7A34;
+  --dian-strong: #065F28;
+  --dian-soft: rgba(11, 122, 52, .10);
+  --dian-ring: rgba(11, 122, 52, .30);
+  color-scheme: light;
 }
 
 html[data-mode="light"] body {
-  background: #F4F7FC;
+  background: var(--l-bg);
+  color: var(--l-text);
 }
 
 body {
-  background: #0b0f19;
-  color: #f8fafc;
+  background: var(--l-bg);
+  color: var(--l-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+/* Selección acorde al modo. */
 ::selection {
   background: rgba(6, 182, 212, 0.35);
+}
+html[data-mode="light"] ::selection {
+  background: rgba(8, 145, 178, .22);
+}
+
+/* Focus visible consistente y accesible en ambos modos. */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--l-accent);
+  outline-offset: 2px;
+}
+
+/* Utilidades de elevación (Tailwind interpreta shadow-[var()] como color,
+   así que definimos clases propias que sí mapean a box-shadow). */
+@layer utilities {
+  .elev-1 { box-shadow: var(--l-elev-1); }
+  .elev-2 { box-shadow: var(--l-elev-2); }
 }

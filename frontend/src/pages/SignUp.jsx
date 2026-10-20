@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, FileText, GitBranch, Globe, GraduationCap, Loader2, Plug, ShieldCheck, Sparkles } from "lucide-react";
+import { Building2, Eye, EyeOff, FileText, GitBranch, Globe, Loader2, Plug, ShieldCheck, TrendingUp, UserPlus } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
 
-/** Beneficios del panel izquierdo (lenguaje de tiles del mockup de producto). */
+/** Beneficios del panel izquierdo (lenguaje corporativo: operación, no becas). */
 const PERKS = [
-  { icon: GraduationCap, tone: "bg-violet-500/15 text-violet-300", title: "Becas y convocatorias", desc: "Calendario, fechas clave y postulaciones." },
-  { icon: FileText, tone: "bg-cyan-500/15 text-cyan-300", title: "Documentos al día", desc: "Facturación DIAN y PDFs en un solo lugar." },
+  { icon: TrendingUp, tone: "bg-blue-500/15 text-blue-300", title: "Analíticas en tiempo real", desc: "Métricas transaccionales y operativas." },
+  { icon: FileText, tone: "bg-cyan-500/15 text-cyan-300", title: "Facturación electrónica DIAN", desc: "Comprobantes y PDFs en un solo lugar." },
   { icon: Plug, tone: "bg-emerald-500/15 text-emerald-300", title: "Integraciones", desc: "Conecta POS, PayPal y tus sistemas." },
   { icon: ShieldCheck, tone: "bg-amber-500/15 text-amber-300", title: "Seguridad por roles", desc: "Permisos granulares y auditoría." },
 ];
@@ -71,7 +71,7 @@ export default function SignUp() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[var(--l-bg)] px-4 py-10 text-[var(--l-text)] antialiased">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,#1E293B,transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--l-glow-top),transparent_60%)]" />
 
       <div className="relative grid w-full max-w-5xl overflow-hidden rounded-2xl border border-[var(--l-border)] bg-[var(--l-bg)] shadow-2xl shadow-cyan-500/10 lg:grid-cols-[1.05fr_1fr]">
         {/* Panel de marca (solo ≥lg) */}
@@ -81,13 +81,13 @@ export default function SignUp() {
               CYTECH<span className="text-cyan-400">.</span>
             </p>
             <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-300">
-              <Sparkles className="h-3.5 w-3.5" /> Cuenta gratuita · Sin tarjeta
+              <Building2 className="h-3.5 w-3.5" /> Plataforma corporativa
             </span>
             <h2 className="mt-5 text-3xl font-bold leading-tight text-white">
-              Tu futuro académico <span className="text-cyan-400">comienza aquí</span>
+              Infraestructura tecnológica <span className="text-cyan-400">para tu operación</span>
             </h2>
             <p className="mt-2 text-sm text-slate-400">
-              Becas · Formación · Tecnología. Gestiona documentos, calendario e integraciones desde un solo lugar.
+              SaaS · Cloud · Integraciones · Facturación DIAN. Centraliza pagos, documentos y datos desde un solo lugar.
             </p>
 
             <ul className="mt-7 space-y-3">
@@ -115,8 +115,8 @@ export default function SignUp() {
           <p className="text-xl font-extrabold tracking-tight">
             CYTECH<span className="text-[var(--l-accent)]">.</span>
           </p>
-          <h1 className="mt-4 text-2xl font-bold">Crear tu cuenta</h1>
-          <p className="mt-1 text-sm text-[var(--l-muted)]">Únete en menos de un minuto.</p>
+          <h1 className="mt-4 text-2xl font-bold">Crea tu cuenta corporativa</h1>
+          <p className="mt-1 text-sm text-[var(--l-muted)]">Configura tu espacio de trabajo en menos de un minuto.</p>
 
           <div className="mt-5 space-y-2.5">
             <a
@@ -200,8 +200,8 @@ export default function SignUp() {
               disabled={loading}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[var(--l-accent)] to-[var(--l-accent2)] px-4 py-3 text-sm font-bold text-white transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {loading ? "Creando tu cuenta…" : "Crear cuenta"}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+              {loading ? "Creando tu cuenta…" : "Crear cuenta corporativa"}
             </button>
           </form>
 
