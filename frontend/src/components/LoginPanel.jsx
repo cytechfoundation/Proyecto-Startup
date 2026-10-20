@@ -30,8 +30,16 @@ export default function LoginPanel({ onSuccess }) {
     try {
       const data = await api.demoLogin(email);
       go(data.access_token);
-    } catch {
-      setErr("Demo no disponible: ejecuta `python seed_demo.py` en el backend.");
+    } catch (ex) {
+      // Distinguir backend apagado (sin respuesta HTTP) de otros fallos.
+      const msg = String(ex?.message || "");
+      if (!/\(HTTP \d+\)/.test(msg)) {
+        setErr("No se pudo conectar con el backend. Verifica que esté corriendo en el puerto 8000 (python -m uvicorn app.main:app).");
+      } else if (/404|400|422/.test(msg)) {
+        setErr("Demo no disponible: ejecuta `python seed_demo.py` en el backend.");
+      } else {
+        setErr(msg);
+      }
     } finally {
       setLoading("");
     }
