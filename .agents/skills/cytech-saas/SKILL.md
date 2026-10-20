@@ -1,82 +1,104 @@
 ---
 name: cytech-saas
 description: >-
-  Guía de trabajo para el SaaS de Cytech Foundation (backend FastAPI + SQLite,
-  frontend React 18/Vite 5/Tailwind, servicios Kafka/RAG). Úsala al modificar
-  este repositorio: arrancar servidores de desarrollo, autenticarte en dev,
-  probar cambios, trabajar el dashboard, hacer push o preparar despliegues.
-  Incluye comandos exactos, cuentas demo, el sistema de diseño del dashboard y
-  gotchas del entorno.
+  Guía práctica para desarrollar, depurar, probar y desplegar el SaaS de Cytech
+  Foundation. Resume su arquitectura, comandos de desarrollo, autenticación,
+  convenciones visuales y particularidades del entorno.
 ---
 
-# Cytech SaaS — guía de trabajo
+# Cytech SaaS
 
-Conocimiento específico de este proyecto que el agente no puede deducir solo.
+Aplica estas pautas al trabajar en este repositorio. Consulta `README.md` y
+`API_ENDPOINTS.md` cuando necesites detalles de arranque, datos demo o contratos
+de API.
 
 ## Arquitectura
 
-- `backend/` — FastAPI + SQLAlchemy sobre **SQLite en dev** (`backend/cytech.db`). Todo bajo `/api/v1/...`.
-- `frontend/` — SPA React 18 + Vite 5 + Tailwind 3 (sin SSR).
-- `services/` — wrappers de Kafka/RAG (flujo WhatsApp ⇄ Kafka ⇄ respuesta RAG).
-- `docker-compose.yml` — infraestructura (Kafka etc.).
-- `API_ENDPOINTS.md` — referencia de endpoints por secciones (§9 subidas de PDF del calendario DIAN, §11 contadores de impacto).
-- `README.md` — arranque y seeding (`seed_demo.py`, `seed_knowledge.py`, `seed_transactions.py`).
+- `backend/`: FastAPI + SQLAlchemy; SQLite local en `backend/cytech.db`. Los
+  endpoints usan el prefijo `/api/v1/`.
+- `frontend/`: SPA React 18 + Vite 5 + Tailwind 3, sin SSR.
+- `services/`: wrappers de Kafka y RAG para el flujo WhatsApp ⇄ Kafka ⇄ RAG.
+- `docker-compose.yml`: infraestructura auxiliar, incluido Kafka.
+- `API_ENDPOINTS.md`: contratos; presta atención a §9 (PDF del calendario DIAN)
+  y §11 (contadores de impacto).
+- `README.md`: instrucciones de arranque y scripts de datos demo
+  (`seed_demo.py`, `seed_knowledge.py`, `seed_transactions.py`).
 
-## Servidores de desarrollo
+## Desarrollo local
 
-Backend (desde `backend/`, **sin `--reload`**: reiniciar a mano tras cada cambio):
+Ejecuta desde la carpeta indicada. El backend va **sin `--reload`**: reinícialo
+manualmente después de modificar código.
 
 ```powershell
+# Desde backend/
 C:\Python314\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Desde frontend/
+npm run dev
 ```
 
-Frontend (desde `frontend/`):
+El frontend queda en `http://localhost:5173`. Reiniciar el entorno puede detener
+los procesos en segundo plano; vuelve a iniciarlos y autentícate de nuevo.
 
-```powershell
-npm run dev   # → http://localhost:5173
-```
+## Autenticación de desarrollo
 
-Un reinicio del servidor cancela los procesos en segundo plano: relanzar ambos y volver a autenticarte.
+Solicita un token con `POST /api/v1/auth/demo` y un cuerpo como:
 
-## Autenticación dev
-
-```http
-POST /api/v1/auth/demo
+```json
 {"email": "admin@cytech.com"}
 ```
 
-Guardar el token como `cytech_token` en `localStorage`. **Hay que repetirlo tras cada reinicio del backend.** Cuentas del switcher de roles del dashboard:
+Guarda el token en `localStorage` bajo `cytech_token`. Debes repetir la
+autenticación después de reiniciar el backend. Usuarios del selector de roles:
 
-| Rol | Email |
+| Rol | Correo |
 |---|---|
 | admin | `admin@cytech.com` |
 | editor | `operador@gmail.com` |
 | client | `demo.retail@gmail.com` |
 
-## Verificación de cambios
+## Verificación
 
-1. Backend: `C:\Python314\python.exe -m pytest` desde `backend/` — la suite (~169 tests) debe quedar en verde.
-2. Frontend: `npm run build` desde `frontend/` tras **cada** cambio de UI (no hay tests de frontend; el build es la comprobación).
-3. UI en vivo: usar las tools de navegador. `browser.evaluate` exige IIFE con clave `script`. Las capturas fallan si la ventana está minimizada → verificar vía DOM.
+- Backend: desde `backend/`, ejecuta
+  `C:\Python314\python.exe -m pytest` (la suite suele tener alrededor de 169
+  pruebas).
+- Frontend: desde `frontend/`, ejecuta `npm run build` después de cada cambio
+  de interfaz; no hay una suite de pruebas frontend documentada.
+- Para validar la UI en ejecución, usa las herramientas de navegador. En
+  `browser.evaluate`, proporciona una IIFE bajo la clave `script`. Si falla una
+  captura con la ventana minimizada, verifica el DOM.
 
-## Línea visual del dashboard
+## Convenciones del dashboard
 
-- El dashboard es **oscuro fijo**: las variables `--t-*` no cambian en modo claro (solo `--l-*`), así que usar colores Tailwind fijos claros-sobre-oscuro.
+- El dashboard permanece oscuro: `--t-*` no cambia con el modo claro. Conserva
+  contraste claro sobre oscuro; las variables `--l-*` corresponden al modo
+  claro de otras superficies.
 - Tarjetas: `rounded-xl bg-[var(--t-surface)] p-5`.
-- Cabeceras con chips de resumen (icono + contador); tablas con cabecera *sticky* en mayúsculas y filas con hover; skeleton al cargar; estado vacío con CTA.
-- Identidad de rol (iconos + clases) sale de la única fuente `frontend/src/data/roles.js` (`ROLE_META`/`roleMeta`): admin violeta, editor cielos, client esmeralda. La usan RbacMatrix, UserDirectory y PermissionTester.
-- Causas/etiquetas del Donar: `frontend/src/data/foundation.js` (becas violeta, equipos cielos, talleres ámbar).
+- Mantén chips de resumen en encabezados, tablas con encabezado sticky en
+  mayúsculas y hover por fila, skeleton durante la carga y CTA en estados vacíos.
+- Usa `frontend/src/data/roles.js` (`ROLE_META`/`roleMeta`) como fuente única
+  para identidad de roles: admin violeta, editor celeste y client esmeralda.
+  La comparten RbacMatrix, UserDirectory y PermissionTester.
+- Las etiquetas de causas de Donar se definen en
+  `frontend/src/data/foundation.js`: becas violeta, equipos celeste y talleres
+  ámbar.
 
-## Git
+## Git, seguridad y particularidades
 
-- Rama `main`; remoto `https://github.com/cytechfoundation/Proyecto-Startup.git`.
-- En PowerShell el push **reporta exit code 1 aunque salga bien** (git escribe a stderr) — verificar el resultado leyendo la salida, no el código.
-- **Nunca** commitear `.env` ni secretos (PayPal/OPENROUTER solo en backend, fuera del repo).
-
-## Gotchas
-
-- `.gitignore` ancla `/data/` a raíz **a propósito**: una regla `data/` ignoraría también `frontend/src/data/` (donde vive `roles.js`).
-- El error `/api/v1/payments/client-token` → 503 en dev es **preexistente** (PayPal sin credenciales), no es regresión.
-- Los cambios de rol del dashboard son asíncronos: esperar a que terminen antes de recargar (riesgo de carrera).
-- aria-labels de los toggles RBAC llevan sufijo «: permitido/bloqueado» al seleccionarlos.
-- Entorno **sin** poppler/ffprobe/soffice/openpyxl; **con** git, node, pypdf y Pillow.
+- Rama principal: `main`; remoto:
+  `https://github.com/cytechfoundation/Proyecto-Startup.git`.
+- Nunca incluyas `.env` ni credenciales en commits. PayPal y OPENROUTER son
+  secretos del backend y deben mantenerse fuera del repositorio.
+- En PowerShell, un push puede mostrar código de salida 1 aunque haya tenido
+  éxito porque Git escribe mensajes en stderr; confirma el resultado en la
+  salida de Git.
+- La regla `/data/` de `.gitignore` está anclada a la raíz deliberadamente:
+  cambiarla por `data/` ignoraría `frontend/src/data/`.
+- El `503` de `/api/v1/payments/client-token` en desarrollo es preexistente
+  cuando faltan credenciales de PayPal; no lo atribuyas a cambios no
+  relacionados.
+- Los cambios de rol son asíncronos: espera a que finalicen antes de recargar.
+  Los `aria-label` de los toggles RBAC incluyen `: permitido` o `: bloqueado`
+  según el estado seleccionado.
+- No están disponibles poppler, ffprobe, soffice ni openpyxl; sí están
+  disponibles git, node, pypdf y Pillow.
