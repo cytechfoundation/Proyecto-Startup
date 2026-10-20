@@ -22,6 +22,16 @@ _NUEVAS_COLUMNAS_USERS: tuple[tuple[str, str], ...] = (
     ("password_hash", "VARCHAR(255)"),
 )
 
+# Columnas que se movieron de `users` a la tabla propia `rues_records`: se
+# eliminan para que el registro RUES no quede acoplado a la fila del usuario
+# (cada NIT es su propia fila; en `users` se sobrescribían entre consultas).
+_COLUMNAS_RUES_A_ELIMINAR: tuple[str, ...] = (
+    "rues_estado",
+    "rues_camara",
+    "rues_matricula",
+    "rues_representante",
+)
+
 
 def upgrade_tax_calendar(engine) -> dict:
     """Aplica los ALTERs pendientes sobre `tax_calendar` y corrige los datos.
@@ -73,20 +83,29 @@ def upgrade_tax_calendar(engine) -> dict:
 
 
 def upgrade_users(engine) -> dict:
-    """Aplica los ALTERs pendientes sobre `users` (registro local con contraseña).
+    """Aplica los ALTERs pendientes sobre `users` y elimina las columnas RUES.
 
-    Idempotente: si la tabla ya tiene la columna, no toca nada.
+    Idempotente: si la tabla ya tiene la columna, no toca nada; y el DROP de
+    las columnas RUES (hoy en la tabla propia `rues_records`) solo se ejecuta
+    si existen.
     """
     inspector = inspect(engine)
     if "users" not in inspector.get_table_names():
-        return {"aplicadas": []}
+        return {"aplicadas": [], "eliminadas": []}
 
     existentes = {col["name"] for col in inspector.get_columns("users")}
     aplicadas: list[str] = []
+    eliminadas: list[str] = []
     with engine.begin() as conn:
         for nombre, ddl in _NUEVAS_COLUMNAS_USERS:
             if nombre in existentes:
                 continue
             conn.execute(text(f"ALTER TABLE users ADD COLUMN {nombre} {ddl}"))
             aplicadas.append(nombre)
-    return {"aplicadas": aplicadas}
+        # Migración: RUES pasa a su propia tabla; se limpian las columnas viejas.
+        for nombre in _COLUMNAS_RUES_A_ELIMINAR:
+            if nombre not in existentes:
+                continue
+            conn.execute(text(f"ALTER TABLE users DROP COLUMN {nombre}"))
+            eliminadas.append(nombre)
+    return {"aplicadas": aplicadas, "eliminadas": eliminadas}

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { BellRing, Plug, Activity, Save, FileText, GraduationCap } from "lucide-react";
+import { BellRing, Plug, Activity, FileText, GraduationCap } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
 import { markStep } from "../services/onboarding.js";
 import AccountSidebar from "../components/AccountSidebar.jsx";
 import AccountSteps from "../components/AccountSteps.jsx";
+import PersonalInfoPanel from "../components/PersonalInfoPanel.jsx";
 import Collapsible from "../components/Collapsible.jsx";
 import InvoicingPanel from "../components/InvoicingPanel.jsx";
 import RadianPanel from "../components/RadianPanel.jsx";
@@ -38,7 +39,6 @@ export default function Account() {
   const navigate = useNavigate();
   const [section, setSection] = useState("panel");
   const [summary, setSummary] = useState(null);
-  const [form, setForm] = useState({ name: "", company: "", phone: "", nit: "", person_type: "" });
   const [msg, setMsg] = useState("");
   const [linked, setLinked] = useState({}); // provider -> {connected, account}
   const [allLinked, setAllLinked] = useState([]); // auditoría admin
@@ -70,10 +70,6 @@ export default function Account() {
   }, [token, user?.role]);
 
   useEffect(() => { loadLinked(); }, [loadLinked]);
-
-  useEffect(() => {
-    if (user) setForm({ name: user.name || "", company: user.company || "", phone: user.phone || "", nit: user.nit || "", person_type: user.person_type || "" });
-  }, [user]);
 
   const select = useCallback((id) => {
     setSection(id);
@@ -132,7 +128,7 @@ export default function Account() {
   if (!token) return <Navigate to="/login" replace />;
 
   const done = {
-    personal: !!(form.name && form.company && form.phone && form.nit),
+    personal: !!(user?.name && user?.company && user?.phone && user?.nit),
     integraciones: Object.values(linked).some((i) => i.connected),
     facturas: !!visited.facturas,
     pagos: !!visited.pagos,
@@ -163,19 +159,6 @@ export default function Account() {
     }
   };
 
-  const save = async (e) => {
-    e.preventDefault();
-    setMsg("");
-    try {
-      await api.updateProfile(token, { ...form, person_type: form.person_type || null });
-      await refresh();
-      setMsg("Perfil actualizado.");
-      select("personal");
-    } catch (err) {
-      setMsg(err.message);
-    }
-  };
-
   const downloadData = async () => {
     try {
       const data = await api.summary(token);
@@ -201,8 +184,6 @@ export default function Account() {
       setMsg(e.message);
     }
   };
-
-  const input = "w-full rounded-lg bg-[var(--t-surface2)] px-3 py-2.5 text-sm ring-1 ring-[var(--t-border)] focus:outline-none focus:ring-[var(--t-accent)]";
 
   return (
     <div className="min-h-screen bg-[var(--t-bg)] p-4 text-white md:p-8">
@@ -255,38 +236,7 @@ export default function Account() {
             </div>
           )}
 
-          {section === "personal" && (
-            <form onSubmit={save} className="rounded-xl bg-[var(--t-surface)] p-5">
-              <h2 className="text-xl font-bold">Información personal</h2>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <label className="text-sm">Nombre
-                  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={`${input} mt-1`} />
-                </label>
-                <label className="text-sm">Empresa
-                  <input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Mi empresa S.A.S." className={`${input} mt-1`} />
-                </label>
-                <label className="text-sm">Teléfono
-                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+57 300 000 0000" className={`${input} mt-1`} />
-                </label>
-                <label className="text-sm">NIT (empresa o persona)
-                  <input value={form.nit} onChange={(e) => setForm({ ...form, nit: e.target.value })} placeholder="900123456-7" className={`${input} mt-1`} />
-                </label>
-                <label className="text-sm">Tipo de persona
-                  <select value={form.person_type} onChange={(e) => setForm({ ...form, person_type: e.target.value })} className={`${input} mt-1`}>
-                    <option value="">Seleccionar…</option>
-                    <option value="natural">Persona natural</option>
-                    <option value="juridica">Persona jurídica</option>
-                  </select>
-                </label>
-                <div className="text-sm">Correo (verificado por {user?.provider})
-                  <p className="mt-1 rounded-lg bg-[var(--t-surface2)] px-3 py-2.5 text-[var(--t-muted)]">{user?.email}</p>
-                </div>
-              </div>
-              <button className="mt-5 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[var(--t-accent)] to-[var(--t-accent2)] px-6 py-2.5 text-sm font-semibold shadow-lg shadow-black/50 transition-all hover:scale-[1.02]">
-                <Save className="h-4 w-4" /> Guardar cambios
-              </button>
-            </form>
-          )}
+          {section === "personal" && <PersonalInfoPanel />}
 
           {section === "integraciones" && (
             <div className="rounded-xl bg-[var(--t-surface)] p-5">

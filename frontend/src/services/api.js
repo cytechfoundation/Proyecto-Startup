@@ -96,6 +96,14 @@ export const api = {
   knowledge: (token) => req("/agent/knowledge", { token }),
   addKnowledge: (token, doc) => req("/agent/knowledge", { token, method: "POST", body: doc }),
   summary: (token) => req("/account/summary", { token }),
+  nitLookup: (token, nit) => req(`/nit/${encodeURIComponent(nit)}`, { token }),
+  nitRecords: (token, { page = 1, pageSize = 10, q = "" } = {}) =>
+    req(
+      `/nit/records?page=${page}&page_size=${pageSize}` +
+        (q ? `&q=${encodeURIComponent(q)}` : ""),
+      { token }
+    ),
+  nitDeleteRecord: (token, nit) => req(`/nit/records/${encodeURIComponent(nit)}`, { token, method: "DELETE" }),
   updateProfile: (token, profile) => req("/account/profile", { token, method: "PUT", body: profile }),
   acceptTerms: (token, accepted) => req("/account/terms", { token, method: "PUT", body: { accepted } }),
   deleteMe: (token, email) => req("/account/me", { token, method: "DELETE", body: { email } }),
