@@ -1,145 +1,334 @@
-# Cytech Web — Plataforma SaaS / Cloud / Integraciones
+# 🚀 Cytech Web — Plataforma SaaS / Cloud / Integraciones
 
-Consultora técnica: software SaaS a medida, arquitectura cloud e integraciones
-(POS, pasarelas de pago, DIAN). Arquitectura Backend-First.
+> **Consultora técnica:** software SaaS a medida, arquitectura cloud e integraciones  
+> (POS, pasarelas de pago, DIAN) • Arquitectura **Backend-First**  
+> 🎓 *Formación práctica con proyectos reales, teoría interactiva y roles diferenciados*
 
-## Estructura
+---
+
+## 📋 Índice Rápido
+
+- [✨ Características](#-características)
+- [🏗️ Arquitectura](#️-arquitectura)
+- [📁 Estructura del Proyecto](#-estructura-del-proyecto)
+- [🎯 Módulo de Cursos](#-módulo-de-cursos)
+- [🔐 Roles y Permisos](#-roles-y-permisos)
+- [🔌 Backend — Quickstart](#-backend--quickstart)
+- [💻 Frontend — Quickstart](#-frontend--quickstart)
+- [📡 Endpoints API](#-endpoints-api)
+- [🛠️ Herramientas Externas](#-herramientas-externas)
+- [🧪 Tecnologías](#-tecnologías)
+- [🗺️ Roadmap](#-roadmap)
+
+---
+
+## ✨ Características
+
+| Área | Funcionalidad | Icono |
+|------|---------------|-------|
+| **Autenticación** | OAuth2/OIDC con Google y GitHub (sin registro manual) | 🔐 |
+| **Gestión de Usuarios** | Autocreación federada, roles dinámicos, cambio de rol por admin | 👥 |
+| **Módulo de Cursos** | Cursos con proyectos externos, teoría interactiva, lecciones ordenadas | 📚 |
+| **Pagos PayPal v2** | Órdenes, capturas, reembolsos, webhooks verificados | 💳 |
+| **Libro Transaccional** | Facturas, pagos, estado y registro de todas las operaciones | 📒 |
+| **Agente IA (RAG)** | Chat con base de conocimiento corporativa, suscripciones, inyección de documentos | 🤖 |
+| **Dashboard** | Directorio de usuarios, matriz RBAC en vivo, probador de permisos | 📊 |
+| **DIAN / Facturación** | Stub documentado con CUFE de prueba | 🧾 |
+| **Notificaciones** | Email vía Resend (log en desarrollo) | 📧 |
+
+---
+
+## 🏗️ Arquitectura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    🌐 FRONTEND (React + Vite)               │
+│  Landing · Login · Dashboard · CoursePlayer · Account · Pay │
+└─────────────────────────────────────────────────────────────┘
+                           ↕️ HTTP/JSON
+┌─────────────────────────────────────────────────────────────┐
+│                  🖥️ BACKEND (FastAPI + SQLAlchemy)          │
+│  Auth · Users · Courses · Payments · Agent · Transactions   │
+└─────────────────────────────────────────────────────────────┘
+                           ↕️ SQL
+┌─────────────────────────────────────────────────────────────┐
+│                 🗄️ BASE DE DATOS (SQLite / PostgreSQL)      │
+│           cytech.db (desarrollo local automática)           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 Estructura del Proyecto
 
 ```
 cytech-web/
-├── backend/               # FastAPI + SQLAlchemy + PostgreSQL
-│   └── app/
-│       ├── main.py        # App factory, routers, CORS
-│       ├── core/          # config, security (JWT propio), deps
-│       ├── db/            # session, base
-│       ├── models/        # User
-│       ├── schemas/       # Pydantic v2
-│       ├── api/v1/        # auth (OAuth2/OIDC), users (admin)
-│       └── services/      # auth_service (validación + autocreación + rol)
-├── frontend/              # React (Vite) + Tailwind
-│   └── src/
-│       ├── pages/         # Landing, Login, Dashboard
-│       ├── components/
-│       ├── context/       # AuthContext
-│       └── services/      # api client
-├── docker-compose.yml     # Postgres + backend + frontend
-└── README.md
+├── 📂 backend/                          # FastAPI + SQLAlchemy
+│   └── 📂 app/
+│       ├── 🐍 main.py                   # App factory, CORS, lifespan
+│       ├── 📂 core/                     # Config, seguridad JWT, dependencias
+│       ├── 📂 db/                       # Sesión, base, migraciones
+│       ├── 📂 models/                   # Modelos SQLAlchemy
+│       │   ├── user.py
+│       │   └── course.py                # 🆕 Curso y Lección
+│       ├── 📂 schemas/                  # Pydantic v2
+│       │   └── course.py                # 🆕 Esquemas de cursos
+│       ├── 📂 api/v1/
+│       │   ├── 📂 endpoints/
+│       │   │   ├── auth.py
+│       │   │   ├── users.py
+│       │   │   └── courses.py           # 🆕 Endpoints de cursos
+│       │   └── router.py
+│       └── 📂 services/
+│           ├── auth_service.py
+│           ├── course_service.py        # 🆕 Lógica de cursos
+│           └── paypal_service.py
+├── 📂 frontend/                         # React + Vite + Tailwind
+│   └── 📂 src/
+│       ├── 📂 pages/                    # Landing, Login, Dashboard, Courses
+│       ├── 📂 components/
+│       │   ├── CoursePlayer.jsx         # 🆕 Reproductor interactivo
+│       │   └── FrontendCoursePanel.jsx  # 🆕 Panel de cursos
+│       ├── 📂 context/                  # AuthContext
+│       └── 📂 services/                 # API client
+├── 📂 herramientas/                     # 🛠️ Utilidades externas
+│   └── 📂 Calculadora/                  # Calculadora interactiva
+│       ├── index.html
+│       ├── script.js
+│       └── styles.css
+├── 🐳 docker-compose.yml                # Postgres + backend + frontend
+├── 📄 README.md
+└── 📄 API_ENDPOINTS.md
 ```
 
-## Reglas de negocio (auth federada)
+---
 
-- **Sin registro manual.** No existe `POST /users` público ni formulario email/password.
-- Solo OAuth2/OIDC: **Google (OIDC id_token)** y **GitHub (OAuth access_token → user/emails API)**.
-- Token del IdP se **valida criptográficamente** (Google: JWKS + `aud`/`iss`/`exp`; GitHub: token activo contra `api.github.com`).
-- Autocreación: si el email no existe → `INSERT`. Rol automático:
-  - `*@cytech.com` → `admin`
-  - otro dominio → `client` (viewer)
-- `GET /api/v1/users` y `PUT /api/v1/users/{id}/role` solo `admin` (JWT propio post-login).
+## 🎯 Módulo de Cursos
 
-## Backend — quickstart
+El módulo de cursos permite recibir **carpetas de proyectos externos** para usarlos en práctica junto con teoría interactiva. Está diseñado para aprendizaje práctico con tres niveles de acceso:
+
+### 📊 Flujo del Alumno
+
+```
+Landing → Login (Google/GitHub) → Catálogo de Cursos → CoursePlayer
+                                                            ↓
+                                                    [Teoría] [Archivos] [Código]
+                                                    (Markdown)  (Explorer)  (Interactivo)
+```
+
+### 🗂️ Estructura de Datos
+
+| Modelo | Campos Clave | Descripción |
+|--------|--------------|-------------|
+| `Course` | `title`, `description`, `project_path`, `difficulty`, `category` | Curso vinculado a carpeta de proyecto |
+| `Lesson` | `title`, `content_markdown`, `order`, `target_file` | Lección con teoría y archivo objetivo |
+
+### 🔧 API de Cursos
+
+```http
+GET    /api/v1/courses          # Listar cursos (público/autenticado)
+GET    /api/v1/courses/{id}     # Detalle de curso
+POST   /api/v1/courses          # Crear curso (Solo ADMIN)
+POST   /api/v1/lessons          # Agregar lección (ADMIN / EDITOR)
+DELETE /api/v1/courses/{id}     # Eliminar curso (Solo ADMIN)
+```
+
+---
+
+## 🔐 Roles y Permisos
+
+El sistema utiliza **RBAC (Role-Based Access Control)** con control granular por endpoint:
+
+| Rol | ¿Cómo se asigna? | Permisos principales |
+|-----|------------------|----------------------|
+| 👑 **Admin** | Email `*@cytech.com` (automático) | Crear/eliminar cursos, gestionar usuarios, cambiar roles |
+| 📝 **Editor** | Asignado por Admin | Crear/editar lecciones y proyectos |
+| 👤 **Client** | Cualquier otro dominio | Ver cursos, leer teoría, acceder a archivos de práctica |
+
+### 🛡️ Matriz de Acceso
+
+```
+Endpoint                    | Admin | Editor | Client
+----------------------------|-------|--------|-------
+POST /courses               |   ✅  |   ❌   |   ❌
+POST /lessons               |   ✅  |   ✅   |   ❌
+GET /courses                |   ✅  |   ✅   |   ✅
+DELETE /courses/{id}        |   ✅  |   ❌   |   ❌
+PUT /users/{id}/role        |   ✅  |   ❌   |   ❌
+```
+
+---
+
+## 🔌 Backend — Quickstart
 
 ```bash
+# 1. Entrar al directorio del backend
 cd backend
-cp .env.example .env   # completar GOOGLE_CLIENT_ID/SECRET, GITHUB_*, FRONTEND_URL
+
+# 2. Copiar y configurar variables de entorno
+cp .env.example .env
+# Editar: DATABASE_URL, JWT_SECRET, FRONTEND_URL, etc.
+
+# 3. Instalar dependencias
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+
+# 4. Ejecutar el servidor (puerto 8000)
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Postgres local o `docker compose up db`. Sin driver Postgres instalado, el backend
-usa SQLite local (`cytech.db`) automáticamente para desarrollo.
+> 💡 **Nota:** Si no tienes PostgreSQL, el backend usa automáticamente **SQLite** (`cytech.db`) para desarrollo local.
+
+### 🧪 Tests y Seed
 
 ```bash
-python -m pytest tests -q   # 3 passed: rol por dominio + autocreación federada
-python seed_demo.py          # crea admin@cytech.com + 2 demos
+# Ejecutar tests
+python -m pytest tests -q
+
+# Crear datos demo (admin@cytech.com + usuarios de prueba)
+python seed_demo.py
+
+# Indexar conocimiento para el agente IA
+python seed_knowledge.py
 ```
 
-## Frontend — quickstart
+---
+
+## 💻 Frontend — Quickstart
 
 ```bash
+# 1. Entrar al directorio del frontend
 cd frontend
+
+# 2. Instalar dependencias
 npm install
-cp .env.example .env   # VITE_API_URL=http://localhost:8000
-npm run dev            # :5173
+
+# 3. Configurar variables de entorno
+cp .env.example .env
+# VITE_API_URL=http://localhost:8000
+
+# 4. Ejecutar en modo desarrollo (puerto 5173)
+npm run dev
 ```
 
-Flujo: Landing (`/`) → CTA "Ingresar a Demo Controlada" → `/login`
-(botones Google/GitHub, sin formulario) → callback → `/dashboard`
-(analíticas simuladas + tabla usuarios + cambio de rol si eres admin).
+### 🎨 Flujo de Usuario
 
-## Variables críticas
-
-| Backend (`backend/.env`) | Frontend (`frontend/.env`) |
-|---|---|
-| `DATABASE_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_CLIENT_ID/SECRET`, `FRONTEND_URL` | `VITE_API_URL`, `VITE_GOOGLE_LOGIN_URL`, `VITE_GITHUB_LOGIN_URL` |
-
-## Endpoints
-
-| Método | Ruta | Acceso |
-|---|---|---|
-| GET | `/api/v1/auth/google/login` | público (302 al consent) |
-| GET | `/api/v1/auth/google/callback?code=...` | público (canjea, crea usuario, emite JWT propio, redirect a frontend) |
-| GET | `/api/v1/auth/github/login` | público |
-| GET | `/api/v1/auth/github/callback?code=...` | público |
-| POST | `/api/v1/auth/federated` `{provider, credential}` | público (valida token del IdP directamente, p. ej. Google One Tap) |
-| GET | `/api/v1/auth/me` | bearer JWT propio |
-| GET | `/api/v1/users` | solo `admin` (filtros `?q=&domain=&role=&status=`) |
-| PUT | `/api/v1/users/{user_id}/role` | solo `admin` (`admin`\|`editor`\|`client`) |
-| PATCH | `/api/v1/users/{user_id}/status` | solo `admin` (activa/inactiva) |
-| GET | `/api/v1/rbac/matrix` | autenticado (matriz única para el Dashboard) |
-| GET/POST/PUT | `/api/v1/content/pos…` | según matriz (`RequirePermission`) |
-| GET/POST/DELETE | `/api/v1/content/dian…` | según matriz (eliminar: solo `admin`) |
-| GET/POST | `/api/v1/content/payments…` | según matriz (reembolsar: solo `admin`) |
-
-Roles: auto-registro federado → `@cytech.com`=admin, resto=client; `editor` lo asigna un admin.
-El Dashboard incluye Directorio con filtros, Matriz RBAC en vivo y probador de permisos.
-
-## Agente IA (RAG)
-
-Tres capas: `services/rag_service.py` (indexación + recuperación), `services/llm_service.py`
-(OpenRouter chat/embeddings), `services/email_service.py` (Resend, log en dev) y
-`api/v1/endpoints/agent.py` (orquestador de intenciones).
-
-| Método | Ruta | Acceso |
-|---|---|---|
-| POST | `/api/v1/agent/chat` `{message}` | público (`noticia:` bloqueado, `suscribir:` registra) |
-| POST | `/api/v1/agent/subscribe` | público |
-| GET/POST | `/api/v1/agent/knowledge` | solo `admin` (inyección en caliente) |
-| GET | `/api/v1/agent/subscribers` | solo `admin` |
-
-```bash
-python seed_knowledge.py   # indexa 4 docs corporativos (usa tu OPENROUTER_API_KEY)
+```
+🏠 Landing (/)
+   ↓ CTA "Ingresar a Demo Controlada"
+🔐 Login (/login) — Google / GitHub (sin formulario)
+   ↓ Callback OAuth2
+📊 Dashboard (/dashboard) — Analíticas, directorio, matriz RBAC
+   ↓ Catálogo de cursos
+📚 CoursePlayer (/courses/:id) — Teoría + Archivos + Práctica
 ```
 
-Sin key el agente responde en modo extractivo; con key usa `rag+llm`.
-Widget flotante "Asistente Cytech" en toda la web + panel admin en el Dashboard.
+---
 
-## Libro transaccional e integraciones
+## 📡 Endpoints API
 
-| Método | Ruta | Acceso |
-|---|---|---|
-| GET | `/api/v1/transactions?kind=&status=&all=&page=` | propia (admin: todas) |
-| POST | `/api/v1/transactions` | según matriz (factura→dian:create, pago→payments:manage) |
-| POST | `/api/v1/webhooks/{paypal\|dian\|pos}` | público (ingesta, verifica si hay credenciales) |
-| GET | `/readyz` | público (chequeo BD) |
+### 🔐 Autenticación
 
-`services/paypal_service.py` (órdenes/capturas, exige credenciales),
-`services/dian_service.py` (stub documentado con CUFE de prueba).
-`X-Request-ID` en cada respuesta. `python seed_transactions.py` para datos demo.
-Mis facturas/pagos en `/cuenta` leen del libro real.
+| Método | Ruta | Acceso | Descripción |
+|--------|------|--------|-------------|
+| `GET` | `/api/v1/auth/google/login` | Público | Redirige a consentimiento de Google |
+| `GET` | `/api/v1/auth/google/callback` | Público | Canjea código, emite JWT propio |
+| `GET` | `/api/v1/auth/github/login` | Público | Redirige a GitHub OAuth |
+| `GET` | `/api/v1/auth/github/callback` | Público | Valida token y crea usuario |
+| `POST` | `/api/v1/auth/federated` | Público | Valida token IdP directamente |
+| `GET` | `/api/v1/auth/me` | Bearer JWT | Datos del usuario autenticado |
 
-## Pagos PayPal v2 (Orders v2 + Payments v2)
+### 👥 Usuarios y Roles
 
-Migrado según la guía v1→v2: intents en mayúsculas, `purchase_units.value/currency_code`,
-`Prefer: return=representation`, `PayPal-Request-Id` por intento, `final_capture` explícito,
-webhooks verificados (reemplazo de IPN) y Transaction Search (reemplazo de List Payments).
+| Método | Ruta | Acceso | Descripción |
+|--------|------|--------|-------------|
+| `GET` | `/api/v1/users` | Solo Admin | Listar usuarios con filtros |
+| `PUT` | `/api/v1/users/{id}/role` | Solo Admin | Cambiar rol (admin/editor/client) |
+| `PATCH` | `/api/v1/users/{id}/status` | Solo Admin | Activar/desactivar usuario |
+| `GET` | `/api/v1/rbac/matrix` | Autenticado | Matriz de permisos para dashboard |
 
-| Método | Ruta | Acceso |
-|---|---|---|
-| POST | `/api/v1/payments/orders` | `payments:manage` |
-| GET / POST | `/api/v1/payments/orders/{id}` , `.../capture`, `.../authorize` | ver / manage |
-| GET / POST | `/api/v1/payments/captures/{id}`, `.../refund` | ver / manage |
-| GET / POST | `/api/v1/payments/authorizations/{id}`, `.../capture`, `.../void` | ver / manage |
-| GET | `/api/v1/payments/search?start_date=&end_date=` | `payments:view` |
+### 📚 Cursos
 
-Todo cobro/captura/reembolso queda en el libro (`Transaction`).
-Requiere `PAYPAL_CLIENT_ID/SECRET` (+ `PAYPAL_WEBHOOK_ID` para verificar); sin ellas responde 503.
+| Método | Ruta | Acceso | Descripción |
+|--------|------|--------|-------------|
+| `GET` | `/api/v1/courses` | Autenticado | Listar todos los cursos |
+| `GET` | `/api/v1/courses/{id}` | Autenticado | Detalle de un curso |
+| `POST` | `/api/v1/courses` | Solo Admin | Crear curso con ruta de proyecto |
+| `POST` | `/api/v1/lessons` | Admin/Editor | Agregar lección teórica |
+| `DELETE` | `/api/v1/courses/{id}` | Solo Admin | Eliminar curso completo |
+
+### 💳 Pagos y Transacciones
+
+| Método | Ruta | Acceso | Descripción |
+|--------|------|--------|-------------|
+| `POST` | `/api/v1/payments/orders` | `payments:manage` | Crear orden PayPal |
+| `POST` | `/api/v1/payments/orders/{id}/capture` | Ver/Manage | Capturar pago |
+| `POST` | `/api/v1/webhooks/{provider}` | Público | Ingestión de webhooks |
+| `GET` | `/api/v1/transactions` | Propia/Admin | Libro transaccional |
+
+### 📊 Sistema y Salud
+
+| Método | Ruta | Acceso | Descripción |
+|--------|------|--------|-------------|
+| `GET` | `/readyz` | Público | Chequeo de base de datos |
+| `GET` | `/health` | Público | Estado de la aplicación |
+
+---
+
+## 🛠️ Herramientas Externas
+
+### 📐 Calculadora Interactiva
+
+Ubicada en `herramientas/Calculadora/`, es una utilidad independiente para cálculos rápidos:
+
+- `index.html` — Interfaz web
+- `script.js` — Lógica de cálculo
+- `styles.css` — Estilos modernos
+
+Puede usarse como módulo práctico dentro de los cursos de formación.
+
+---
+
+## 🧪 Tecnologías
+
+### Backend
+- **FastAPI** — Framework web async
+- **SQLAlchemy 2.0** — ORM y base de datos
+- **Pydantic v2** — Validación de datos
+- **Python-JOSE** — JWT y tokens
+- **HTTPX** — Cliente HTTP para IdP
+- **SQLite / PostgreSQL** — Base de datos
+
+### Frontend
+- **React 18** — Interfaz de usuario
+- **Vite** — Bundler y dev server
+- **Tailwind CSS** — Estilos utilitarios
+- **Lucide React** — Iconografía
+- **PayPal Web SDK v6** — Pagos integrados
+
+### DevOps
+- **Docker Compose** — Orquestación local
+- **Pytest** — Testing backend
+- **NGROK** — Túneles para webhooks
+
+---
+
+## 🗺️ Roadmap
+
+- [x] ✅ Autenticación federada (Google/GitHub)
+- [x] ✅ Sistema de roles RBAC
+- [x] ✅ Módulo de cursos con proyectos externos
+- [x] ✅ Botón de pago interactivo PayPal
+- [x] ✅ Calculadora como herramienta práctica
+- [ ] Agente IA con RAG completo (OpenRouter)
+- [ ] Integración DIAN para facturación electrónica
+- [ ] Despliegue en Vercel / Railway
+
+---
+
+## 📄 Licencia
+
+MIT License © Cytech Foundation — Software libre para formación tecnológica.
+
+---
+
+> 💬 **¿Dudas o sugerencias?** Abre un issue en el repositorio o contacta al equipo de Cytech Foundation.
