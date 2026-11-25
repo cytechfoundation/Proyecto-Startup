@@ -9,8 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.models.impact_counter import ImpactCounter
 
-#: key -> valores por defecto (coinciden con la página de donación).
+#: key -> valores por defecto. `curso_*` son los cursos preparados: sus cifras
+#: las edita el panel /cuenta y las muestra la sección Donar. `becas`,
+#: `equipos` y `talleres` son las causas de donación.
 DEFAULTS: dict[str, dict] = {
+    "curso_ruta_frontend": {"label": "Ruta Frontend desde Cero", "unit": "cursos", "value": 0},
     "becas": {"label": "Becas de estudio", "unit": "becas", "value": 100},
     "equipos": {"label": "Equipos tecnológicos", "unit": "equipos", "value": 250},
     "talleres": {"label": "Talleres gratuitos", "unit": "talleres", "value": 500},

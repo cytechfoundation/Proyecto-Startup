@@ -1,4 +1,4 @@
-"""Contadores de impacto de la fundación (becas, equipos, talleres).
+"""Contadores de impacto de la fundación (cursos preparados, becas, equipos, talleres).
 
 `GET` es público: la página de donación los muestra en vivo. La escritura
 (`PUT` y `POST .../adjust`) es exclusiva de administradores, igual que el
@@ -36,7 +36,7 @@ def _row_or_404(db: Session, key: str):
 
 @router.get("/counters")
 def list_counters(db: Session = Depends(get_db)):
-    """Cifras de impacto que publica la landing (becas, equipos, talleres)."""
+    """Catálogo completo: cursos preparados (`curso_*`) y las cifras de donación."""
     rows = impact_service.get_counters(db)
     return {"count": len(rows), "counters": [impact_service.to_dict(r) for r in rows]}
 

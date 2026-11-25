@@ -88,8 +88,14 @@ condiciones de la propia empresa, **sin depender de la aprobación de un tercero
 
 - Causa `becas` (violeta): `frontend/src/data/foundation.js` y el chip en
   `frontend/src/components/DonationList.jsx`.
-- Sección de donación y contador público: `frontend/src/components/Donate.jsx`
-  y `frontend/src/components/ScholarshipCounter.jsx` (panel `/cuenta`).
+- Sección de donación y cifras públicas: `frontend/src/components/Donate.jsx`
+  muestra en "Tu aporte transforma" **los cursos preparados**
+  (`FOUNDATION.courses` en `frontend/src/data/foundation.js`, cada uno con su
+  contador `curso_*` en el backend; hoy la Ruta Frontend desde Cero). El panel
+  `/cuenta` (`CoursesCounter.jsx`) suma el total de cursos vendidos y permite
+  ajustes +1/−1 por curso. Las causas becas/equipos/talleres siguen siendo los
+  destinos de la donación (chips de pago), aunque sus cifras ya no se listan
+  en esa tarjeta.
 - Texto que ya comunica el propósito: *"Tu apoyo nos permite financiar becas de
   estudio y formación tecnológica…"* en `Donate.jsx`.
 - Base de conocimiento del asistente (`seed_knowledge.py`): si el chatbot debe

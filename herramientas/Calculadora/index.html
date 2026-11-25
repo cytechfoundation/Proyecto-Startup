@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Corporativa</title>
+    <!-- Fuentes Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Estilos CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <main class="calculator-module" role="region" aria-label="Calculadora">
+        <!-- Pantalla de la Calculadora -->
+        <section class="calc-screen" aria-live="polite">
+            <div class="calc-operation" id="operation-view" aria-label="Operación en curso"></div>
+            <div class="calc-typed" id="result-view" aria-label="Resultado o valor actual">0</div>
+        </section>
+
+        <!-- Teclado de botones -->
+        <section class="calc-buttons">
+            <button type="button" class="btn-clear" onclick="clearScreen()" aria-label="Limpiar todo">C</button>
+            <button type="button" class="btn-operator" onclick="appendOperator('/')" aria-label="Dividir">÷</button>
+            <button type="button" class="btn-operator" onclick="appendOperator('*')" aria-label="Multiplicar">×</button>
+            <button type="button" class="btn-operator" onclick="deleteLast()" aria-label="Borrar último dígito">⌫</button>
+
+            <button type="button" onclick="appendNumber('7')">7</button>
+            <button type="button" onclick="appendNumber('8')">8</button>
+            <button type="button" onclick="appendNumber('9')">9</button>
+            <button type="button" class="btn-operator" onclick="appendOperator('-')" aria-label="Restar">−</button>
+
+            <button type="button" onclick="appendNumber('4')">4</button>
+            <button type="button" onclick="appendNumber('5')">5</button>
+            <button type="button" onclick="appendNumber('6')">6</button>
+            <button type="button" class="btn-operator" onclick="appendOperator('+')" aria-label="Sumar">+</button>
+
+            <button type="button" onclick="appendNumber('1')">1</button>
+            <button type="button" onclick="appendNumber('2')">2</button>
+            <button type="button" onclick="appendNumber('3')">3</button>
+            <button type="button" class="btn-equal" onclick="calculate()" aria-label="Calcular resultado">=</button>
+
+            <button type="button" class="btn-zero" onclick="appendNumber('0')">0</button>
+            <button type="button" onclick="appendDecimal('.')" aria-label="Punto decimal">.</button>
+        </section>
+    </main>
+
+    <!-- Script de lógica -->
+    <script src="script.js"></script>
+</body>
+</html>

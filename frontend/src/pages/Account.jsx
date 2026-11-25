@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { BellRing, Plug, Activity, FileText, GraduationCap } from "lucide-react";
+import { BellRing, BookOpen, Plug, Activity, FileText, GraduationCap } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
 import { markStep } from "../services/onboarding.js";
@@ -12,7 +12,8 @@ import InvoicingPanel from "../components/InvoicingPanel.jsx";
 import RadianPanel from "../components/RadianPanel.jsx";
 import ThemeSwitcher from "../components/ThemeSwitcher.jsx";
 import CalendarImporter from "../components/CalendarImporter.jsx";
-import ScholarshipCounter from "../components/ScholarshipCounter.jsx";
+import CoursesCounter from "../components/CoursesCounter.jsx";
+import FrontendCoursePanel from "../components/FrontendCoursePanel.jsx";
 
 const INTEGRATIONS = [
   { id: "pos", name: "POS / Punto de venta", desc: "Sincroniza tickets, caja e inventario." },
@@ -202,8 +203,13 @@ export default function Account() {
                 </Collapsible>
               )}
               {user?.role === "admin" && (
-                <Collapsible title="Contador de becas (admin)" icon={GraduationCap} tone="green" defaultOpen badge="página pública">
-                  <ScholarshipCounter token={token} onError={setMsg} />
+                <Collapsible title="Contador de cursos comprados (admin)" icon={BookOpen} tone="green" defaultOpen badge="Ruta Frontend">
+                  <CoursesCounter token={token} onError={setMsg} />
+                </Collapsible>
+              )}
+              {user?.role === "admin" && (
+                <Collapsible title="Ruta Frontend desde Cero (admin)" icon={GraduationCap} tone="blue" defaultOpen badge="60 h · 4 módulos">
+                  <FrontendCoursePanel />
                 </Collapsible>
               )}
               <Collapsible title="Alertas" icon={BellRing} tone="blue" defaultOpen badge="0 mensajes sin leer">

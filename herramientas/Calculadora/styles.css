@@ -1,0 +1,135 @@
+:root {
+    --primary-color: #0f172a; /* Slate 900 */
+    --brand-color: #2563eb;   /* Azul Corporativo / Accent */
+    --brand-hover: #1d4ed8;   /* Azul interactivo */
+    --bg-calculator: #ffffff; /* Fondo de la calculadora */
+    --display-bg: #f8fafc;    /* Fondo de pantalla de resultados */
+    --text-main: #1e293b;     /* Texto oscuro */
+    --text-muted: #64748b;    /* Texto secundario */
+    --btn-bg: #f1f5f9;        /* Botones estándar */
+    --btn-hover: #e2e8f0;     /* Hover estándar */
+    --btn-op-bg: #eff6ff;     /* Botones de operación */
+    --border-color: #e2e8f0;  /* Líneas divisorias */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+    background-color: #f4f6f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 16px;
+}
+
+/* Contenedor del Módulo */
+.calculator-module {
+    background: var(--bg-calculator);
+    width: 100%;
+    max-width: 360px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+/* Pantalla / Display */
+.calc-screen {
+    padding: 24px;
+    background: var(--display-bg);
+    border-bottom: 1px solid var(--border-color);
+    text-align: right;
+}
+
+.calc-operation {
+    font-size: 14px;
+    color: var(--text-muted);
+    min-height: 20px;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calc-typed {
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--text-main);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Rejilla de Botones */
+.calc-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 20px;
+}
+
+button {
+    border: none;
+    outline: none;
+    height: 60px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-main);
+    background-color: var(--btn-bg);
+    user-select: none;
+}
+
+button:hover {
+    background-color: var(--btn-hover);
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+/* Botones de Operación Específicos */
+.btn-operator {
+    color: var(--brand-color);
+    background-color: var(--btn-op-bg);
+    font-weight: 600;
+}
+
+.btn-operator:hover {
+    background-color: #dbeafe;
+}
+
+/* Botón de Igual (Acción Principal) */
+.btn-equal {
+    background-color: var(--brand-color);
+    color: #ffffff;
+    font-weight: 600;
+    grid-row: span 2;
+    height: 132px;
+}
+
+.btn-equal:hover {
+    background-color: var(--brand-hover);
+}
+
+.btn-clear {
+    color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.btn-clear:hover {
+    background-color: #fee2e2;
+}
+
+.btn-zero {
+    grid-column: span 2;
+}

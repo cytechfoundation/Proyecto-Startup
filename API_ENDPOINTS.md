@@ -256,32 +256,33 @@ curl -X POST "http://localhost:8000/api/v1/tools/pdf.extract/run" \
 
 ---
 
-## 📊 11. Contadores de Impacto (becas, equipos, talleres)
-Cifras de impacto que publica la sección **Donar** de la página principal, guardadas en BD y
-actualizables desde el panel admin de `/cuenta`. La primera lectura siembra los valores por defecto
-(`becas: 100`, `equipos: 250`, `talleres: 500`); el catálogo de claves es cerrado.
+## 📊 11. Contadores de Impacto (cursos preparados, becas, equipos, talleres)
+Cifras guardadas en BD y actualizables desde el panel admin de `/cuenta`. La primera lectura siembra
+los valores por defecto (`curso_ruta_frontend: 0`, `becas: 100`, `equipos: 250`, `talleres: 500`);
+el catálogo de claves es cerrado. Las claves `curso_*` son cursos preparados (una por curso, con su
+contador de compras); las otras tres son las causas de donación que muestra la sección **Donar**.
 
 | Método | Endpoint | Descripción | Auth |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/impact/counters` | Lista todos los contadores (`key`, `value`, `label`, `unit`, `updated_at`). Siembra los que falten. | Público |
-| `GET` | `/impact/counters/{key}` | Un contador por clave (`becas` \| `equipos` \| `talleres`). | Público |
+| `GET` | `/impact/counters/{key}` | Un contador por clave (`curso_ruta_frontend` \| `becas` \| `equipos` \| `talleres`). | Público |
 | `PUT` | `/impact/counters/{key}` | Fija el valor. Cuerpo: `{"value": 120}` (0 ≤ value ≤ 1 000 000). | ✅ (Admin) |
 | `POST` | `/impact/counters/{key}/adjust` | Suma/resta unidades. Cuerpo: `{"delta": 1}` (−1000 ≤ delta ≤ 1000; nunca baja de 0). | ✅ (Admin) |
 
 Clave inexistente → `404`. Valor fuera de rango → `422`. La siembra es idempotente: leer dos veces
 no reinicia el valor editado.
 
-### Ejemplo: registrar una beca nueva (ReadyAPI / curl)
+### Ejemplo: registrar una venta de curso y una beca (ReadyAPI / curl)
 ```bash
-# la landing consulta esto sin token
-curl "http://localhost:8000/api/v1/impact/counters/becas"
-# → {"key":"becas","value":100,"label":"Becas de estudio","unit":"becas","updated_at":"…"}
+# la landing consulta las cifras de la sección Donar sin token
+curl "http://localhost:8000/api/v1/impact/counters/curso_ruta_frontend"
+# → {"key":"curso_ruta_frontend","value":0,"label":"Ruta Frontend desde Cero","unit":"cursos","updated_at":"…"}
 
-# el panel admin de /cuenta suma una beca recién otorgada
-curl -X POST "http://localhost:8000/api/v1/impact/counters/becas/adjust" \
+# el panel admin de /cuenta suma una venta de la Ruta Frontend
+curl -X POST "http://localhost:8000/api/v1/impact/counters/curso_ruta_frontend/adjust" \
   -H "Authorization: Bearer <ADMIN_TOKEN>" -H "Content-Type: application/json" \
   -d '{"delta": 1}'
-# → {"key":"becas","value":101,"label":"Becas de estudio","unit":"becas","updated_at":"…"}
+# → {"key":"curso_ruta_frontend","value":1,"label":"Ruta Frontend desde Cero","unit":"cursos","updated_at":"…"}
 ```
 
 ---

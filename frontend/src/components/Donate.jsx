@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeftRight,
   ArrowUpRight,
+  BookOpen,
   Check,
   CreditCard,
   ExternalLink,
@@ -21,7 +22,7 @@ import { api } from "../services/api.js";
 import { loadPaypalWebSdk, getPaypalInstance, paypalWebSdkEnv } from "../services/paypalWebSdk.js";
 import { FOUNDATION } from "../data/foundation.js";
 
-const ICONS = { GraduationCap, Laptop, Users };
+const ICONS = { BookOpen, GraduationCap, Laptop, Users };
 
 const fmtCOP = (n) =>
   new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(Math.round(Number(n) || 0));
@@ -393,26 +394,20 @@ export default function Donate() {
                 </div>
               </div>
 
+              {/* Cifras en vivo de los cursos preparados (clave = contador `curso_*`). */}
               <ul className="mt-5 space-y-4">
-                {FOUNDATION.causes.map((c) => {
+                {FOUNDATION.courses.map((c) => {
                   const Icon = ICONS[c.icon] ?? HeartHandshake;
-                  const on = cause === c.id;
                   const vivo = impacto[c.id];
                   const cifra = vivo?.value ?? c.impact.value;
                   const unidad = vivo?.unit ?? c.impact.unit;
-                  const tone =
-                    c.tone === "amber"
-                      ? "from-amber-400 to-orange-500 text-slate-950"
-                      : "from-cyan-400 to-blue-600 text-white";
                   return (
                     <li
                       key={c.id}
                       title={vivo?.updated_at ? `Actualizado ${new Date(vivo.updated_at).toLocaleString("es-CO")}` : undefined}
-                      className={`flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors ${
-                        on ? "bg-[var(--l-accent-soft)]" : ""
-                      }`}
+                      className="flex items-center gap-3 rounded-2xl px-2 py-2"
                     >
-                      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br ${tone}`}>
+                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 text-white">
                         <Icon className="h-5 w-5" />
                       </span>
                       <div className="min-w-0 flex-1">
@@ -420,13 +415,7 @@ export default function Donate() {
                         <p className="truncate text-xs text-[var(--l-muted)]">{c.impact.note}</p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p
-                          className={`text-lg font-extrabold ${
-                            c.tone === "amber" ? "text-[var(--l-warn)]" : "text-[var(--l-accent)]"
-                          }`}
-                        >
-                          +{cifra}
-                        </p>
+                        <p className="text-lg font-extrabold text-[var(--l-accent)]">{cifra}</p>
                         <p className="text-[11px] uppercase tracking-wider text-[var(--l-muted)]">{unidad}</p>
                       </div>
                     </li>

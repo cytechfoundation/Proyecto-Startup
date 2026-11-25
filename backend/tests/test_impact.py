@@ -52,8 +52,11 @@ def test_get_publico_siembra_los_valores_de_la_landing():
     r = client.get("/api/v1/impact/counters")
     assert r.status_code == 200
     body = r.json()
-    assert body["count"] == 3
+    assert body["count"] == 4
     por_key = {c["key"]: c for c in body["counters"]}
+    assert por_key["curso_ruta_frontend"]["value"] == 0
+    assert por_key["curso_ruta_frontend"]["label"] == "Ruta Frontend desde Cero"
+    assert por_key["curso_ruta_frontend"]["unit"] == "cursos"
     assert por_key["becas"]["value"] == 100 and por_key["becas"]["unit"] == "becas"
     assert por_key["equipos"]["value"] == 250
     assert por_key["talleres"]["value"] == 500
@@ -129,7 +132,7 @@ def test_catalogo_es_cerrado():
 
     db = TestingSession()
     try:
-        assert set(impact_service.DEFAULTS) == {"becas", "equipos", "talleres"}
+        assert set(impact_service.DEFAULTS) == {"curso_ruta_frontend", "becas", "equipos", "talleres"}
         try:
             impact_service.get_counter(db, "inventado")
             raise AssertionError("debió rechazar una clave fuera del catálogo")
